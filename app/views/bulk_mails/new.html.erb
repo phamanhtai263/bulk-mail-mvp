@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Gửi Email Hàng Loạt - Bulk Mail System</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <%= csrf_meta_tags %>
+  <%= csp_meta_tag %>
+  <%= stylesheet_link_tag "application" %>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      margin: 0;
+      padding: 20px;
+    }
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    .header {
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      margin-bottom: 30px;
+      box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .btn-back {
+      padding: 10px 20px;
+      background: #3498db;
+      color: white;
+      text-decoration: none;
+      border-radius: 5px;
+      font-size: 14px;
+    }
+    .btn-back:hover {
+      background: #2980b9;
+    }
+    h1 {
+      color: white;
+      text-align: center;
+      margin-bottom: 30px;
+    }
+    .form-container {
+      background: white;
+      padding: 30px;
+      border-radius: 10px;
+      box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+    }
+    .form-group {
+      margin-bottom: 25px;
+    }
+    label {
+      display: block;
+      margin-bottom: 8px;
+      color: #333;
+      font-weight: bold;
+      font-size: 16px;
+    }
+    .label-description {
+      font-size: 13px;
+      color: #666;
+      font-weight: normal;
+      margin-left: 5px;
+    }
+    textarea {
+      width: 100%;
+      padding: 12px;
+      border: 2px solid #ddd;
+      border-radius: 5px;
+      box-sizing: border-box;
+      font-size: 14px;
+      font-family: 'Courier New', monospace;
+      resize: vertical;
+    }
+    textarea:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+    #recipients {
+      min-height: 150px;
+    }
+    #email_content {
+      min-height: 250px;
+    }
+    .variables-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 15px;
+      margin-top: 10px;
+    }
+    .variable-input {
+      width: 100%;
+      padding: 10px;
+      border: 2px solid #ddd;
+      border-radius: 5px;
+      box-sizing: border-box;
+      font-size: 14px;
+    }
+    .variable-input:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+    .variable-label {
+      display: block;
+      margin-bottom: 5px;
+      color: #555;
+      font-size: 14px;
+      font-weight: 600;
+    }
+    .help-box {
+      background: #f8f9fa;
+      border-left: 4px solid #667eea;
+      padding: 15px;
+      margin-bottom: 20px;
+      border-radius: 5px;
+    }
+    .help-box h3 {
+      margin-top: 0;
+      color: #667eea;
+      font-size: 16px;
+    }
+    .help-box ul {
+      margin: 10px 0;
+      padding-left: 20px;
+    }
+    .help-box li {
+      margin: 5px 0;
+      color: #666;
+      font-size: 14px;
+    }
+    .help-box code {
+      background: #e9ecef;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-family: 'Courier New', monospace;
+      color: #e74c3c;
+    }
+    .btn-submit {
+      width: 100%;
+      padding: 15px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      border-radius: 5px;
+      font-size: 18px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: transform 0.2s;
+    }
+    .btn-submit:hover {
+      transform: translateY(-2px);
+    }
+    .alert {
+      padding: 15px;
+      margin-bottom: 20px;
+      border-radius: 5px;
+      text-align: center;
+    }
+    .alert-danger {
+      background-color: #fee;
+      color: #c33;
+      border: 1px solid #fcc;
+    }
+    .example-box {
+      background: #fffbf0;
+      border: 1px solid #ffe066;
+      padding: 12px;
+      border-radius: 5px;
+      margin-top: 8px;
+      font-size: 13px;
+      color: #666;
+    }
+    .example-box strong {
+      color: #333;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h2 style="margin: 0; color: #333;">📧 Gửi Email Hàng Loạt</h2>
+      <%= link_to "← Quay lại Menu", menu_path, class: "btn-back" %>
+    </div>
+
+    <% if flash[:alert] %>
+      <div class="alert alert-danger"><%= flash[:alert] %></div>
+    <% end %>
+
+    <div class="form-container">
+      <div class="help-box">
+        <h3>📌 Hướng dẫn sử dụng</h3>
+        <ul>
+          <li><strong>Danh sách người nhận:</strong> Mỗi dòng theo format: <code>email@example.com, Tên đầy đủ</code></li>
+          <li><strong>Biến có sẵn:</strong> <code>%&lt;email&gt;</code> và <code>%&lt;full_name&gt;</code> sẽ tự động thay thế cho mỗi người nhận</li>
+          <li><strong>Biến tùy chỉnh:</strong> <code>%&lt;var_1&gt;</code> đến <code>%&lt;var_5&gt;</code> cho nội dung chung</li>
+        </ul>
+      </div>
+
+      <%= form_with url: bulk_mails_path, method: :post, local: true do |f| %>
+        
+        <!-- 1. Danh sách người nhận -->
+        <div class="form-group">
+          <label>
+            1️⃣ Danh sách người nhận
+            <span class="label-description">(Mỗi dòng: email, Họ tên)</span>
+          </label>
+          <%= text_area_tag :recipients, params[:recipients], 
+              placeholder: "user1@example.com, Nguyễn Văn A\nuser2@example.com, Trần Thị B\nuser3@example.com, Lê Văn C",
+              required: true %>
+          <div class="example-box">
+            <strong>Ví dụ:</strong><br>
+            john@company.com, John Doe<br>
+            jane@company.com, Jane Smith
+          </div>
+        </div>
+
+        <!-- 2. Nội dung email -->
+        <div class="form-group">
+          <label>
+            2️⃣ Nội dung email
+            <span class="label-description">(Sử dụng các biến để cá nhân hóa)</span>
+          </label>
+          <%= text_area_tag :email_content, params[:email_content],
+              placeholder: "Xin chào %<full_name>,\n\nEmail của bạn là: %<email>\n\nThông tin về %<var_1>...\n\nTrân trọng,\nĐội ngũ %<var_2>",
+              required: true %>
+          <div class="example-box">
+            <strong>Biến có thể dùng:</strong> 
+            <code>%&lt;email&gt;</code>, 
+            <code>%&lt;full_name&gt;</code>, 
+            <code>%&lt;var_1&gt;</code> → <code>%&lt;var_5&gt;</code>
+          </div>
+        </div>
+
+        <!-- 3. Biến tùy chỉnh -->
+        <div class="form-group">
+          <label>
+            3️⃣ Biến tùy chỉnh
+            <span class="label-description">(Tùy chọn - Giá trị chung cho tất cả email)</span>
+          </label>
+          <div class="variables-grid">
+            <div>
+              <label class="variable-label">%&lt;var_1&gt;</label>
+              <%= text_field_tag :var_1, params[:var_1], 
+                  placeholder: "Ví dụ: Tên sản phẩm", 
+                  class: "variable-input" %>
+            </div>
+            <div>
+              <label class="variable-label">%&lt;var_2&gt;</label>
+              <%= text_field_tag :var_2, params[:var_2], 
+                  placeholder: "Ví dụ: Tên công ty", 
+                  class: "variable-input" %>
+            </div>
+            <div>
+              <label class="variable-label">%&lt;var_3&gt;</label>
+              <%= text_field_tag :var_3, params[:var_3], 
+                  placeholder: "Ví dụ: Ngày sự kiện", 
+                  class: "variable-input" %>
+            </div>
+            <div>
+              <label class="variable-label">%&lt;var_4&gt;</label>
+              <%= text_field_tag :var_4, params[:var_4], 
+                  placeholder: "Ví dụ: Địa điểm", 
+                  class: "variable-input" %>
+            </div>
+            <div>
+              <label class="variable-label">%&lt;var_5&gt;</label>
+              <%= text_field_tag :var_5, params[:var_5], 
+                  placeholder: "Ví dụ: Mã giảm giá", 
+                  class: "variable-input" %>
+            </div>
+          </div>
+        </div>
+
+        <!-- 4. Button submit -->
+        <div class="form-group">
+          <%= submit_tag "🚀 Gửi Email Hàng Loạt", class: "btn-submit" %>
+        </div>
+
+      <% end %>
+    </div>
+  </div>
+
+  <script>
+    // Preview functionality (optional)
+    document.addEventListener('DOMContentLoaded', function() {
+      console.log('Bulk Mail Form Ready');
+    });
+  </script>
+</body>
+</html>
