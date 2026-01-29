@@ -1,0 +1,2 @@
+class BulkMailer < ApplicationMailer
+end
