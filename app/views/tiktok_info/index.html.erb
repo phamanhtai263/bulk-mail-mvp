@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Get info TikTok</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <%= csrf_meta_tags %>
+  <%= csp_meta_tag %>
+  <style>
+    body { font-family: Arial, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; margin: 0; padding: 20px; }
+    .container { max-width: 600px; margin: 50px auto; }
+    .card { background: white; border-radius: 15px; padding: 40px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
+    .header { text-align: center; margin-bottom: 30px; }
+    h1 { color: #333; margin: 0; font-size: 28px; }
+    .subtitle { color: #666; font-size: 14px; margin-top: 8px; }
+    label { display: block; margin-bottom: 8px; color: #555; font-weight: bold; }
+    input[type="text"] { width: 100%; padding: 12px; border: 2px solid #ddd; border-radius: 8px; box-sizing: border-box; font-size: 15px; }
+    input[type="text"]:focus { border-color: #667eea; outline: none; }
+    .hint { font-size: 13px; color: #888; margin-top: 5px; }
+    .btn { width: 100%; padding: 15px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; margin-top: 20px; }
+    .alert-error { background: #fee; color: #c33; border: 1px solid #fcc; padding: 12px; border-radius: 8px; margin-bottom: 20px; text-align: center; }
+    .back-link { display: block; text-align: center; margin-top: 20px; color: white; text-decoration: none; font-weight: bold; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="card">
+      <div class="header">
+        <div style="font-size: 70px;">🎵</div>
+        <h1>Get info TikTok</h1>
+        <div class="subtitle">Nhập URL profile TikTok để lấy followers, followings, likes</div>
+      </div>
+      <% if flash[:alert] %>
+        <div class="alert-error"><%= flash[:alert] %></div>
+      <% end %>
+      <%= form_with url: fetch_tiktok_info_path, method: :post, data: { turbo: false } do |f| %>
+        <label>🔗 TikTok Profile URL</label>
+        <%= text_field_tag :tiktok_url, params[:tiktok_url], placeholder: "https://www.tiktok.com/@username", required: true %>
+        <div class="hint">Ví dụ: https://www.tiktok.com/@asya_senol</div>
+        <%= submit_tag "🔍 Lấy Thông Tin", class: "btn", data: { disable_with: "⏳ Đang tải..." } %>
+      <% end %>
+    </div>
+    <%= link_to "← Quay lại Menu", menu_path, class: "back-link" %>
+  </div>
+</body>
+</html>

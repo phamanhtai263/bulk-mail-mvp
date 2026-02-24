@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Kết quả TikTok</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <%= csrf_meta_tags %>
+  <%= csp_meta_tag %>
+  <style>
+    body { font-family: Arial, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; margin: 0; padding: 20px; }
+    .container { max-width: 700px; margin: 30px auto; }
+    .card { background: white; border-radius: 15px; padding: 40px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
+    .profile-header { text-align: center; margin-bottom: 30px; padding-bottom: 20px; border-bottom: 2px solid #f0f0f0; }
+    .avatar { width: 100px; height: 100px; border-radius: 50%; border: 3px solid #667eea; object-fit: cover; }
+    .username { font-size: 24px; font-weight: bold; color: #333; margin: 10px 0; }
+    .display-name { font-size: 18px; color: #666; }
+    .bio { font-size: 14px; color: #888; margin-top: 8px; font-style: italic; }
+    .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin: 20px 0; }
+    .stat-box { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 10px; text-align: center; }
+    .stat-value { font-size: 28px; font-weight: bold; }
+    .stat-label { font-size: 13px; opacity: 0.9; margin-top: 5px; }
+    .actions { display: flex; gap: 10px; margin-top: 20px; }
+    .btn { flex: 1; padding: 12px; border: none; border-radius: 8px; font-size: 15px; font-weight: bold; cursor: pointer; text-decoration: none; text-align: center; }
+    .btn-primary { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
+    .btn-secondary { background: #f0f0f0; color: #333; }
+    .tiktok-link { display: block; text-align: center; margin: 15px 0; padding: 10px; background: #f8f8f8; border-radius: 8px; color: #667eea; text-decoration: none; font-weight: bold; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="card">
+      <div class="profile-header">
+        <% if @result[:avatar_url].present? %>
+          <img src="<%= @result[:avatar_url] %>" alt="Avatar" class="avatar">
+        <% else %>
+          <div style="font-size: 80px;">👤</div>
+        <% end %>
+        <div class="username">@<%= @result[:username] %></div>
+        <% if @result[:display_name].present? %>
+          <div class="display-name"><%= @result[:display_name] %></div>
+        <% end %>
+        <% if @result[:bio].present? %>
+          <div class="bio"><%= @result[:bio] %></div>
+        <% end %>
+        <%= link_to "🔗 Xem trên TikTok", @result[:url], target: "_blank", class: "tiktok-link" %>
+      </div>
+
+      <div class="stats-grid">
+        <div class="stat-box">
+          <div class="stat-value"><%= number_with_delimiter(@result[:followers].to_i) %></div>
+          <div class="stat-label">👥 Followers</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-value"><%= number_with_delimiter(@result[:following].to_i) %></div>
+          <div class="stat-label">➕ Following</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-value"><%= number_with_delimiter(@result[:likes].to_i) %></div>
+          <div class="stat-label">❤️ Likes</div>
+        </div>
+      </div>
+
+      <div class="actions">
+        <%= link_to "🔍 Tra cứu khác", tiktok_info_path, class: "btn btn-primary" %>
+        <%= link_to "← Menu", menu_path, class: "btn btn-secondary" %>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
