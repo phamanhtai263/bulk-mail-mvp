@@ -6,33 +6,70 @@
   <%= csrf_meta_tags %>
   <%= csp_meta_tag %>
   <style>
+    * { box-sizing: border-box; }
     body { font-family: Arial, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; margin: 0; padding: 20px; }
-    .container { max-width: 700px; margin: 30px auto; }
-    .card { background: white; border-radius: 15px; padding: 40px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
-    .profile-header { text-align: center; margin-bottom: 30px; padding-bottom: 20px; border-bottom: 2px solid #f0f0f0; }
-    .avatar { width: 100px; height: 100px; border-radius: 50%; border: 3px solid #667eea; object-fit: cover; }
-    .username { font-size: 24px; font-weight: bold; color: #333; margin: 10px 0; }
-    .display-name { font-size: 18px; color: #666; }
-    .bio { font-size: 14px; color: #888; margin-top: 8px; font-style: italic; }
-    .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin: 20px 0; }
-    .stat-box { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 10px; text-align: center; }
-    .stat-value { font-size: 28px; font-weight: bold; }
-    .stat-label { font-size: 13px; opacity: 0.9; margin-top: 5px; }
-    .actions { display: flex; gap: 10px; margin-top: 20px; }
-    .btn { flex: 1; padding: 12px; border: none; border-radius: 8px; font-size: 15px; font-weight: bold; cursor: pointer; text-decoration: none; text-align: center; }
+    .container { max-width: 860px; margin: 30px auto; }
+    .card { background: white; border-radius: 15px; padding: 35px 40px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
+
+    .profile-header { text-align: center; margin-bottom: 25px; padding-bottom: 20px; border-bottom: 2px solid #f0f0f0; }
+    .avatar { width: 90px; height: 90px; border-radius: 50%; border: 3px solid #667eea; object-fit: cover; }
+    .username { font-size: 22px; font-weight: bold; color: #333; margin: 10px 0 4px; }
+    .display-name { font-size: 16px; color: #666; }
+    .bio { font-size: 13px; color: #888; margin-top: 6px; font-style: italic; }
+    .tiktok-link { display: inline-block; margin-top: 10px; padding: 7px 18px; background: #f0eeff; border-radius: 20px; color: #667eea; text-decoration: none; font-weight: bold; font-size: 13px; }
+    .tiktok-link:hover { background: #e0d8ff; }
+
+    .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin: 20px 0; }
+    .stat-box { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 18px 10px; border-radius: 10px; text-align: center; }
+    .stat-value { font-size: 26px; font-weight: bold; }
+    .stat-label { font-size: 12px; opacity: 0.9; margin-top: 4px; }
+
+    .section-title { font-size: 15px; font-weight: bold; color: #444; margin: 22px 0 10px; padding-bottom: 6px; border-bottom: 2px solid #e8e0ff; display: flex; align-items: center; gap: 8px; }
+    .badge { background: #667eea; color: white; font-size: 11px; padding: 2px 9px; border-radius: 12px; font-weight: normal; }
+
+    .latest-post-box { background: #f8f4ff; border: 1px solid #c4a8f0; border-radius: 8px; padding: 12px 16px; word-break: break-all; }
+    .latest-post-box a { color: #5a4fcf; font-weight: bold; text-decoration: none; font-size: 13px; }
+    .latest-post-box a:hover { text-decoration: underline; }
+
+    .toolbar { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; flex-wrap: wrap; }
+    .copy-btn { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; padding: 7px 16px; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: bold; }
+    .copy-btn:hover { opacity: 0.85; }
+    .sort-btn { background: #f0f0f0; color: #555; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 12px; }
+    .sort-btn.active { background: #667eea; color: white; }
+
+    .commenter-table-wrap { max-height: 420px; overflow-y: auto; border: 1px solid #e0e0e0; border-radius: 10px; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    thead th { background: #f8f4ff; color: #555; font-weight: bold; padding: 10px 12px; text-align: left; position: sticky; top: 0; border-bottom: 2px solid #e0d8ff; white-space: nowrap; cursor: pointer; user-select: none; }
+    thead th:hover { background: #ede8ff; }
+    thead th .arrow { margin-left: 4px; color: #999; font-size: 11px; }
+    tbody tr:hover { background: #f8f4ff; }
+    tbody td { padding: 9px 12px; border-bottom: 1px solid #f5f5f5; vertical-align: middle; }
+    tbody tr:last-child td { border-bottom: none; }
+    td.num { color: #bbb; font-size: 11px; width: 32px; }
+    td.url-cell a { color: #333; text-decoration: none; font-weight: 500; }
+    td.url-cell a:hover { color: #667eea; text-decoration: underline; }
+    td.stat-cell { text-align: right; color: #444; font-weight: 500; }
+    td.stat-cell.na { color: #ccc; font-style: italic; font-size: 11px; font-weight: normal; }
+
+    .no-data { color: #aaa; font-size: 13px; font-style: italic; padding: 8px 0; }
+
+    .actions { display: flex; gap: 10px; margin-top: 25px; }
+    .btn { flex: 1; padding: 12px; border: none; border-radius: 8px; font-size: 15px; font-weight: bold; cursor: pointer; text-decoration: none; text-align: center; display: block; }
     .btn-primary { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
     .btn-secondary { background: #f0f0f0; color: #333; }
-    .tiktok-link { display: block; text-align: center; margin: 15px 0; padding: 10px; background: #f8f8f8; border-radius: 8px; color: #667eea; text-decoration: none; font-weight: bold; }
   </style>
 </head>
 <body>
   <div class="container">
     <div class="card">
+
+      <%# ====== Profile Header ====== %>
       <div class="profile-header">
         <% if @result[:avatar_url].present? %>
-          <img src="<%= @result[:avatar_url] %>" alt="Avatar" class="avatar">
+          <img src="<%= @result[:avatar_url] %>" alt="Avatar" class="avatar"
+               onerror="this.style.display='none'">
         <% else %>
-          <div style="font-size: 80px;">👤</div>
+          <div style="font-size:70px;">👤</div>
         <% end %>
         <div class="username">@<%= @result[:username] %></div>
         <% if @result[:display_name].present? %>
@@ -44,6 +81,7 @@
         <%= link_to "🔗 Xem trên TikTok", @result[:url], target: "_blank", class: "tiktok-link" %>
       </div>
 
+      <%# ====== Main Stats ====== %>
       <div class="stats-grid">
         <div class="stat-box">
           <div class="stat-value"><%= number_with_delimiter(@result[:followers].to_i) %></div>
@@ -59,11 +97,153 @@
         </div>
       </div>
 
+      <%# ====== Latest Post ====== %>
+      <div class="section-title">📌 Bài post mới nhất</div>
+      <% if @result[:latest_post_url].present? %>
+        <div class="latest-post-box">
+          🎬 <%= link_to @result[:latest_post_url], @result[:latest_post_url], target: "_blank" %>
+        </div>
+      <% else %>
+        <p class="no-data">Không tìm được bài post mới nhất.</p>
+      <% end %>
+
+      <%# ====== Commenters Table ====== %>
+      <% commenters = @result[:commenters] || [] %>
+      <div class="section-title">
+        💬 Người đã comment
+        <span class="badge"><%= commenters.size %></span>
+      </div>
+
+      <% if commenters.any? %>
+        <div class="toolbar">
+          <button class="copy-btn" onclick="copyAllUrls()">📋 Copy tất cả URL</button>
+          <button class="copy-btn" onclick="copyAsCSV()" style="background: #764ba2;">📊 Copy CSV</button>
+          <span style="font-size:12px;color:#999;"><%= commenters.size %> commenters</span>
+        </div>
+
+        <div class="commenter-table-wrap">
+          <table id="commenter-table">
+            <thead>
+              <tr>
+                <th class="num">#</th>
+                <th onclick="sortTable(1)" data-col="1">Tài khoản <span class="arrow">↕</span></th>
+                <th onclick="sortTable(2)" data-col="2" style="text-align:right;">Followers <span class="arrow">↕</span></th>
+                <th onclick="sortTable(3)" data-col="3" style="text-align:right;">Following <span class="arrow">↕</span></th>
+                <th onclick="sortTable(4)" data-col="4" style="text-align:right;">Likes <span class="arrow">↕</span></th>
+              </tr>
+            </thead>
+            <tbody id="commenter-tbody">
+              <% commenters.each_with_index do |c, i| %>
+                <tr data-username="<%= c[:username] %>"
+                    data-url="<%= c[:url] %>"
+                    data-followers="<%= c[:followers].to_i %>"
+                    data-following="<%= c[:following].to_i %>"
+                    data-likes="<%= c[:likes].to_i %>">
+                  <td class="num"><%= i + 1 %></td>
+                  <td class="url-cell">
+                    <%= link_to "@#{c[:username]}", c[:url], target: "_blank" %>
+                    <% if c[:display_name].present? && c[:display_name] != c[:username] %>
+                      <br><span style="color:#aaa;font-size:11px;"><%= c[:display_name] %></span>
+                    <% end %>
+                  </td>
+                  <% if c[:followers].nil? %>
+                    <td class="stat-cell na" colspan="3">N/A</td>
+                  <% else %>
+                    <td class="stat-cell"><%= number_with_delimiter(c[:followers].to_i) %></td>
+                    <td class="stat-cell"><%= number_with_delimiter(c[:following].to_i) %></td>
+                    <td class="stat-cell"><%= number_with_delimiter(c[:likes].to_i) %></td>
+                  <% end %>
+                </tr>
+              <% end %>
+            </tbody>
+          </table>
+        </div>
+      <% else %>
+        <p class="no-data">
+          <% if @result[:latest_post_url].present? %>
+            Bài post chưa có comment hoặc TikTok đang giới hạn quyền truy cập.
+          <% else %>
+            Không thể lấy danh sách comment.
+          <% end %>
+        </p>
+      <% end %>
+
+      <%# ====== Actions ====== %>
       <div class="actions">
         <%= link_to "🔍 Tra cứu khác", tiktok_info_path, class: "btn btn-primary" %>
         <%= link_to "← Menu", menu_path, class: "btn btn-secondary" %>
       </div>
+
     </div>
   </div>
+
+  <script>
+    // Copy tất cả URL
+    function copyAllUrls() {
+      const rows = document.querySelectorAll('#commenter-tbody tr');
+      const urls = Array.from(rows).map(r => r.dataset.url).filter(Boolean).join('\n');
+      copyText(urls, rows.length + ' URL');
+    }
+
+    // Copy dạng CSV: username,url,followers,following,likes
+    function copyAsCSV() {
+      const rows = document.querySelectorAll('#commenter-tbody tr');
+      const lines = ['username,url,followers,following,likes'];
+      rows.forEach(r => {
+        lines.push([
+          r.dataset.username, r.dataset.url,
+          r.dataset.followers, r.dataset.following, r.dataset.likes
+        ].join(','));
+      });
+      copyText(lines.join('\n'), rows.length + ' dòng CSV');
+    }
+
+    function copyText(text, label) {
+      navigator.clipboard.writeText(text).then(() => {
+        alert('Đã copy ' + label + ' vào clipboard!');
+      }).catch(() => {
+        const ta = document.createElement('textarea');
+        ta.value = text; document.body.appendChild(ta);
+        ta.select(); document.execCommand('copy');
+        document.body.removeChild(ta);
+        alert('Đã copy ' + label + '!');
+      });
+    }
+
+    // Sort table by column
+    let sortCol = -1, sortAsc = true;
+    function sortTable(col) {
+      const tbody = document.getElementById('commenter-tbody');
+      const rows = Array.from(tbody.querySelectorAll('tr'));
+      sortAsc = (sortCol === col) ? !sortAsc : true;
+      sortCol = col;
+      rows.sort((a, b) => {
+        const aCell = a.querySelectorAll('td')[col];
+        const bCell = b.querySelectorAll('td')[col];
+        if (!aCell || !bCell) return 0;
+        let aVal = aCell.textContent.trim().replace(/,/g, '');
+        let bVal = bCell.textContent.trim().replace(/,/g, '');
+        // Numeric sort for stat columns
+        if (col >= 2 && !isNaN(aVal) && !isNaN(bVal)) {
+          return sortAsc ? Number(aVal) - Number(bVal) : Number(bVal) - Number(aVal);
+        }
+        return sortAsc ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
+      });
+      rows.forEach((r, i) => {
+        r.querySelector('.num').textContent = i + 1;
+        tbody.appendChild(r);
+      });
+      // Update arrow indicators
+      document.querySelectorAll('thead th').forEach(th => {
+        const span = th.querySelector('.arrow');
+        if (span) span.textContent = '↕';
+      });
+      const thArr = document.querySelectorAll('thead th');
+      if (thArr[col]) {
+        const span = thArr[col].querySelector('.arrow');
+        if (span) span.textContent = sortAsc ? '↑' : '↓';
+      }
+    }
+  </script>
 </body>
 </html>
