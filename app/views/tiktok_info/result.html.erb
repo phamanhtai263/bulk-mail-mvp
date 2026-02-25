@@ -50,6 +50,13 @@
     td.url-cell a:hover { color: #667eea; text-decoration: underline; }
     td.stat-cell { text-align: right; color: #444; font-weight: 500; }
     td.stat-cell.na { color: #ccc; font-style: italic; font-size: 11px; font-weight: normal; }
+    td.email-cell { font-size: 12px; color: #555; }
+    td.email-cell a { color: #667eea; text-decoration: none; }
+    td.email-cell a:hover { text-decoration: underline; }
+    td.email-cell .na { color: #ccc; font-style: italic; }
+    tbody tr.has-email { background: #f0fff4; }
+    tbody tr.has-email:hover { background: #e0faeb; }
+    tbody tr.has-email td.email-cell a { color: #27ae60; font-weight: bold; }
 
     .no-data { color: #aaa; font-size: 13px; font-style: italic; padding: 8px 0; }
 
@@ -98,10 +105,10 @@
       </div>
 
       <%# ====== Latest Post ====== %>
-      <div class="section-title">📌 Bài post mới nhất</div>
-      <% if @result[:latest_post_url].present? %>
+      <div class="section-title">📌 Bài post target (ghim / nhiều view nhất)</div>
+      <% if @result[:target_post_url].present? %>
         <div class="latest-post-box">
-          🎬 <%= link_to @result[:latest_post_url], @result[:latest_post_url], target: "_blank" %>
+          🎬 <%= link_to @result[:target_post_url], @result[:target_post_url], target: "_blank" %>
         </div>
       <% else %>
         <p class="no-data">Không tìm được bài post mới nhất.</p>
@@ -117,6 +124,7 @@
       <% if commenters.any? %>
         <div class="toolbar">
           <button class="copy-btn" onclick="copyAllUrls()">📋 Copy tất cả URL</button>
+          <button class="copy-btn" onclick="copyEmails()" style="background:#27ae60;">📧 Copy Emails</button>
           <button class="copy-btn" onclick="copyAsCSV()" style="background: #764ba2;">📊 Copy CSV</button>
           <span style="font-size:12px;color:#999;"><%= commenters.size %> commenters</span>
         </div>
@@ -130,15 +138,18 @@
                 <th onclick="sortTable(2)" data-col="2" style="text-align:right;">Followers <span class="arrow">↕</span></th>
                 <th onclick="sortTable(3)" data-col="3" style="text-align:right;">Following <span class="arrow">↕</span></th>
                 <th onclick="sortTable(4)" data-col="4" style="text-align:right;">Likes <span class="arrow">↕</span></th>
+                <th onclick="sortTable(5)" data-col="5">Email <span class="arrow">↕</span></th>
               </tr>
             </thead>
             <tbody id="commenter-tbody">
               <% commenters.each_with_index do |c, i| %>
-                <tr data-username="<%= c[:username] %>"
+                <tr class="<%= 'has-email' if c[:email].present? %>"
+                    data-username="<%= c[:username] %>"
                     data-url="<%= c[:url] %>"
                     data-followers="<%= c[:followers].to_i %>"
                     data-following="<%= c[:following].to_i %>"
-                    data-likes="<%= c[:likes].to_i %>">
+                    data-likes="<%= c[:likes].to_i %>"
+                    data-email="<%= c[:email] %>">
                   <td class="num"><%= i + 1 %></td>
                   <td class="url-cell">
                     <%= link_to "@#{c[:username]}", c[:url], target: "_blank" %>
@@ -153,6 +164,13 @@
                     <td class="stat-cell"><%= number_with_delimiter(c[:following].to_i) %></td>
                     <td class="stat-cell"><%= number_with_delimiter(c[:likes].to_i) %></td>
                   <% end %>
+                  <td class="email-cell">
+                    <% if c[:email].present? %>
+                      <%= mail_to c[:email], c[:email] %>
+                    <% else %>
+                      <span class="na">N/A</span>
+                    <% end %>
+                  </td>
                 </tr>
               <% end %>
             </tbody>
@@ -160,7 +178,7 @@
         </div>
       <% else %>
         <p class="no-data">
-          <% if @result[:latest_post_url].present? %>
+          <% if @result[:target_post_url].present? %>
             Bài post chưa có comment hoặc TikTok đang giới hạn quyền truy cập.
           <% else %>
             Không thể lấy danh sách comment.
@@ -185,14 +203,26 @@
       copyText(urls, rows.length + ' URL');
     }
 
-    // Copy dạng CSV: username,url,followers,following,likes
+    // Copy chỉ emails (bỏ qua N/A)
+    function copyEmails() {
+      const rows = document.querySelectorAll('#commenter-tbody tr');
+      const emails = Array.from(rows).map(r => r.dataset.email).filter(e => e && e.trim() !== '');
+      if (emails.length === 0) {
+        alert('Không tìm thấy email nào trong danh sách commenters.');
+        return;
+      }
+      copyText(emails.join('\n'), emails.length + ' email');
+    }
+
+    // Copy dạng CSV: username,url,followers,following,likes,email
     function copyAsCSV() {
       const rows = document.querySelectorAll('#commenter-tbody tr');
-      const lines = ['username,url,followers,following,likes'];
+      const lines = ['username,url,followers,following,likes,email'];
       rows.forEach(r => {
         lines.push([
           r.dataset.username, r.dataset.url,
-          r.dataset.followers, r.dataset.following, r.dataset.likes
+          r.dataset.followers, r.dataset.following, r.dataset.likes,
+          r.dataset.email || ''
         ].join(','));
       });
       copyText(lines.join('\n'), rows.length + ' dòng CSV');

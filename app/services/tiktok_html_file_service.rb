@@ -5,8 +5,8 @@ class TiktokHtmlFileService
 
   USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
   COMMENT_COUNT_PER_PAGE = 20
-  MAX_COMMENT_PAGES = 10   # tối đa 200 comments
-  MAX_STATS_FETCH    = 30  # tối đa fetch stats cho 30 commenters để tránh timeout
+  MAX_COMMENT_PAGES = 5    # tối đa 100 comments (5 trang × 20)
+  MAX_STATS_FETCH    = 100 # fetch stats cho tất cả commenters
 
   def get_info(url)
     username = extract_username(url)
@@ -28,8 +28,8 @@ class TiktokHtmlFileService
 
     return result unless result[:success]
 
-    latest_post = get_latest_post_with_commenters(username)
-    result.merge(latest_post)
+    target_post = get_target_post_with_commenters(username, result[:sec_uid])
+    result.merge(target_post)
   rescue => e
     File.delete(tmp_file) if tmp_file && File.exist?(tmp_file)
     Rails.logger.error "TiktokHtmlFileService Error: #{e.message}\n#{e.backtrace.first(3).join("\n")}"
@@ -38,43 +38,121 @@ class TiktokHtmlFileService
 
   private
 
-  def get_latest_post_with_commenters(username)
+  # Chọn post target: ưu tiên pinned → nhiều view nhất → fallback embed page
+  def get_target_post_with_commenters(username, sec_uid)
+    video_id, video_url, reason = pick_target_video(username, sec_uid)
+
+    if video_id.nil?
+      Rails.logger.warn "No target video found for #{username}"
+      return { target_post_url: nil, commenters: [] }
+    end
+
+    Rails.logger.info "Target video [#{reason}]: #{video_id}"
+
+    commenters = fetch_all_commenters(video_id, username)
+    commenters = enrich_with_stats(commenters)
+
+    { target_post_url: video_url, commenters: commenters }
+  rescue => e
+    Rails.logger.error "get_target_post_with_commenters error: #{e.message}"
+    { target_post_url: nil, commenters: [] }
+  end
+
+  # Trả về [video_id, url, reason]
+  # Dùng item_list API (cần secUid) → có isTop + playCount đầy đủ
+  def pick_target_video(username, sec_uid)
+    items = fetch_video_list(username, sec_uid)
+    Rails.logger.info "Video list from API: #{items.size} items"
+
+    if items.any?
+      # Ưu tiên 1: video được ghim (isTop = 1)
+      pinned = items.find { |v| v['isTop'].to_i == 1 }
+      if pinned
+        id = pinned['id'] || pinned['itemId']
+        Rails.logger.info "Found PINNED video: #{id}"
+        return [id, "https://www.tiktok.com/@#{username}/video/#{id}", 'PINNED']
+      end
+
+      # Ưu tiên 2: video có nhiều lượt xem nhất
+      best = items.max_by { |v| v.dig('stats', 'playCount').to_i }
+      if best
+        id    = best['id'] || best['itemId']
+        plays = best.dig('stats', 'playCount').to_i
+        Rails.logger.info "Found MOST_VIEWED video: #{id} (#{plays} plays)"
+        return [id, "https://www.tiktok.com/@#{username}/video/#{id}", "MOST_VIEWED(#{plays} plays)"]
+      end
+    end
+
+    # Fallback: embed page → video có ID lớn nhất (mới nhất)
+    Rails.logger.warn "item_list API returned nothing, falling back to embed page"
     embed_file = Rails.root.join("tmp", "tiktok_embed_#{username}_#{Time.now.to_i}.html")
     embed_url  = "https://www.tiktok.com/embed/@#{username}"
+    success    = download_with_curl(embed_url, embed_file, referer: "https://www.google.com/")
 
-    Rails.logger.info "=== Downloading embed page for: #{username} ==="
-    success = download_with_curl(embed_url, embed_file, referer: "https://www.google.com/")
-
-    unless success && File.exist?(embed_file)
-      return { latest_post_url: nil, commenters: [] }
+    if success && File.exist?(embed_file)
+      embed_html = File.read(embed_file)
+      File.delete(embed_file) if File.exist?(embed_file)
+      escaped   = Regexp.escape(username)
+      video_ids = embed_html.scan(%r{tiktok\.com/@#{escaped}/video/(\d+)}).flatten.uniq
+      unless video_ids.empty?
+        id = video_ids.max_by(&:to_i)
+        return [id, "https://www.tiktok.com/@#{username}/video/#{id}", 'LATEST_FALLBACK']
+      end
     end
+
+    [nil, nil, nil]
+  end
+
+  # Gọi TikTok item_list API để lấy danh sách video với isTop + playCount
+  def fetch_video_list(username, sec_uid)
+    return fetch_video_list_via_html(username) if sec_uid.blank?
+
+    api_url = "https://www.tiktok.com/api/post/item_list/" \
+              "?secUid=#{sec_uid}&count=35&cursor=0&aid=1988"
+    tmp = Rails.root.join("tmp", "tiktok_items_#{username}_#{Time.now.to_i}.json")
+
+    success = download_with_curl(
+      api_url, tmp,
+      referer: "https://www.tiktok.com/@#{username}",
+      accept:  "application/json, text/plain, */*"
+    )
+
+    unless success && File.exist?(tmp)
+      Rails.logger.warn "item_list API download failed"
+      return fetch_video_list_via_html(username)
+    end
+
+    raw = File.read(tmp)
+    File.delete(tmp) if File.exist?(tmp)
+
+    begin
+      j = JSON.parse(raw)
+      items = j['itemList'] || j['items'] || []
+      Rails.logger.info "item_list API: #{items.size} videos, status=#{j['statusCode']}"
+      return items if items.any?
+    rescue JSON::ParserError => e
+      Rails.logger.warn "item_list API JSON parse error: #{e.message}"
+    end
+
+    # Nếu API không trả về gì, fallback sang scrape HTML profile
+    fetch_video_list_via_html(username)
+  end
+
+  # Fallback: scrape video IDs từ embed page, trả về array giả với chỉ id (không có stats)
+  def fetch_video_list_via_html(username)
+    embed_file = Rails.root.join("tmp", "tiktok_embed_#{username}_#{Time.now.to_i}.html")
+    embed_url  = "https://www.tiktok.com/embed/@#{username}"
+    success    = download_with_curl(embed_url, embed_file, referer: "https://www.google.com/")
+
+    return [] unless success && File.exist?(embed_file)
 
     embed_html = File.read(embed_file)
     File.delete(embed_file) if File.exist?(embed_file)
-    Rails.logger.info "Embed HTML: #{embed_html.size} bytes, deleted."
-
-    escaped  = Regexp.escape(username)
+    escaped   = Regexp.escape(username)
     video_ids = embed_html.scan(%r{tiktok\.com/@#{escaped}/video/(\d+)}).flatten.uniq
 
-    if video_ids.empty?
-      Rails.logger.warn "No video IDs found in embed page"
-      return { latest_post_url: nil, commenters: [] }
-    end
-
-    latest_id  = video_ids.max_by(&:to_i)
-    latest_url = "https://www.tiktok.com/@#{username}/video/#{latest_id}"
-    Rails.logger.info "Latest video ID: #{latest_id}"
-
-    # Bước 1: Lấy list commenters (username + url)
-    commenters = fetch_all_commenters(latest_id, username)
-
-    # Bước 2: Fetch stats (followers/following/likes) cho từng commenter
-    commenters = enrich_with_stats(commenters)
-
-    { latest_post_url: latest_url, commenters: commenters }
-  rescue => e
-    Rails.logger.error "get_latest_post_with_commenters error: #{e.message}"
-    { latest_post_url: nil, commenters: [] }
+    # Trả về format giống item_list nhưng không có stats
+    video_ids.map { |vid| { 'id' => vid, 'stats' => { 'playCount' => 0 }, 'isTop' => 0 } }
   end
 
   # Trả về [{username:, url:, display_name:}]
@@ -130,10 +208,9 @@ class TiktokHtmlFileService
     all.uniq { |c| c[:username] }
   end
 
-  # Fetch followers/following/likes mỗi commenter bằng cách download profile page
   def enrich_with_stats(commenters)
     limited = commenters.first(MAX_STATS_FETCH)
-    Rails.logger.info "Fetching stats for #{limited.size} commenters..."
+    Rails.logger.info "Fetching stats for #{limited.size}/#{commenters.size} commenters..."
 
     limited.map.with_index(1) do |commenter, i|
       Rails.logger.info "  [#{i}/#{limited.size}] @#{commenter[:username]}"
@@ -169,12 +246,15 @@ class TiktokHtmlFileService
       next unless content.include?('webapp.user-detail')
       begin
         j = JSON.parse(content)
-        stats = j.dig('__DEFAULT_SCOPE__', 'webapp.user-detail', 'userInfo', 'stats')
-        next unless stats
+        user_info = j.dig('__DEFAULT_SCOPE__', 'webapp.user-detail', 'userInfo')
+        next unless user_info
+        stats = user_info['stats']
+        bio   = user_info.dig('user', 'signature').to_s
         return {
           followers: stats['followerCount'].to_i,
           following: stats['followingCount'].to_i,
-          likes:     (stats['heartCount'] || stats['heart']).to_i
+          likes:     (stats['heartCount'] || stats['heart']).to_i,
+          email:     extract_email(bio)
         }
       rescue JSON::ParserError
       end
@@ -184,12 +264,19 @@ class TiktokHtmlFileService
     followers = html.match(/"followerCount"\s*:\s*(\d+)/)&.[](1).to_i
     following = html.match(/"followingCount"\s*:\s*(\d+)/)&.[](1).to_i
     likes     = html.match(/"heart(?:Count)?"\s*:\s*(\d+)/)&.[](1).to_i
-    { followers: followers, following: following, likes: likes }
+    bio       = html.match(/"signature"\s*:\s*"([^"]+)"/)&.[](1).to_s
+    { followers: followers, following: following, likes: likes, email: extract_email(bio) }
+  end
+
+  # Lấy email đầu tiên tìm thấy trong chuỗi text, nil nếu không có
+  def extract_email(text)
+    return nil if text.blank?
+    text.match(/[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/)&.[](0)
   end
 
   def download_with_curl(url, tmp_file, referer: "https://www.google.com/", accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
     cmd = [
-      "curl", "-s", "-L", "-k",
+      "curl", "-s", "-L",
       "-A", USER_AGENT,
       "-H", "Accept: #{accept}",
       "-H", "Accept-Language: en-US,en;q=0.9",
@@ -269,11 +356,13 @@ class TiktokHtmlFileService
     avatar    = html.match(/"avatarLarger"\s*:\s*"([^"]+)"/)&.[](1)
     bio       = html.match(/"signature"\s*:\s*"([^"]+)"/)&.[](1)
     videos    = html.match(/"videoCount"\s*:\s*(\d+)/)&.[](1).to_i
+    sec_uid   = html.match(/"secUid"\s*:\s*"([^"]+)"/)&.[](1)
 
     if follower > 0 || following > 0 || likes > 0
       Rails.logger.info "Parsed from regex: followers=#{follower}, following=#{following}, likes=#{likes}"
       return {
         success: true, url: url, username: username,
+        sec_uid: sec_uid,
         display_name: nickname, avatar_url: avatar&.gsub('\\u002F', '/'),
         bio: bio, followers: follower, following: following,
         likes: likes, video_count: videos
@@ -289,6 +378,7 @@ class TiktokHtmlFileService
       success:      true,
       url:          url,
       username:     username,
+      sec_uid:      user['secUid'],
       display_name: user['nickname'],
       avatar_url:   user['avatarLarger'] || user['avatarMedium'],
       bio:          user['signature'],

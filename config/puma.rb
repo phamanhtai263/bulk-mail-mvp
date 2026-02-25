@@ -30,6 +30,9 @@ threads threads_count, threads_count
 # Specifies the `port` that Puma will listen on to receive requests; default is 3000.
 port ENV.fetch("PORT", 3000)
 
+# Tăng timeout cho các request nặng (vd: fetch TikTok ~100 commenters ~10 phút)
+worker_timeout 900
+
 # Allow puma to be restarted by `bin/rails restart` command.
 plugin :tmp_restart
 
