@@ -17,7 +17,9 @@ class FetchCommenterStatsJob < ApplicationJob
       results[idx.to_s] = {
         followers: stats[:followers],
         following: stats[:following],
-        likes:     stats[:likes]
+        likes:     stats[:likes],
+        email:     stats[:email],
+        linktree:  stats[:linktree]
       }
     end
 

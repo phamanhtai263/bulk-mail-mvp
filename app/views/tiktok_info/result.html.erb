@@ -57,6 +57,12 @@
     tbody tr.has-email { background: #f0fff4; }
     tbody tr.has-email:hover { background: #e0faeb; }
     tbody tr.has-email td.email-cell a { color: #27ae60; font-weight: bold; }
+    tbody tr.has-linktree-only { background: #fff8f0; }
+    tbody tr.has-linktree-only:hover { background: #fff0e0; }
+    td.linktree-cell { font-size: 12px; color: #555; }
+    td.linktree-cell a { color: #e8591a; text-decoration: none; }
+    td.linktree-cell a:hover { text-decoration: underline; }
+    td.linktree-cell .na { color: #ccc; font-style: italic; }
 
     .no-data { color: #aaa; font-size: 13px; font-style: italic; padding: 8px 0; }
 
@@ -128,6 +134,16 @@
           <button class="copy-btn" onclick="copyAsCSV()" style="background: #764ba2;">📊 Copy CSV</button>
           <span style="font-size:12px;color:#999;"><%= commenters.size %> commenters</span>
         </div>
+        <div style="font-size:11px;color:#888;margin-bottom:6px;display:flex;gap:16px;">
+          <span style="display:inline-flex;align-items:center;gap:4px;">
+            <span style="width:12px;height:12px;background:#f0fff4;border:1px solid #b2dfdb;border-radius:2px;display:inline-block;"></span>
+            Có Email
+          </span>
+          <span style="display:inline-flex;align-items:center;gap:4px;">
+            <span style="width:12px;height:12px;background:#fff8f0;border:1px solid #ffe0b2;border-radius:2px;display:inline-block;"></span>
+            Chỉ có Linktree
+          </span>
+        </div>
 
         <div class="commenter-table-wrap">
           <table id="commenter-table">
@@ -139,17 +155,20 @@
                 <th onclick="sortTable(3)" data-col="3" style="text-align:right;">Following <span class="arrow">↕</span></th>
                 <th onclick="sortTable(4)" data-col="4" style="text-align:right;">Likes <span class="arrow">↕</span></th>
                 <th onclick="sortTable(5)" data-col="5">Email <span class="arrow">↕</span></th>
+                <th onclick="sortTable(6)" data-col="6">Linktree <span class="arrow">↕</span></th>
               </tr>
             </thead>
             <tbody id="commenter-tbody">
               <% commenters.each_with_index do |c, i| %>
-                <tr class="<%= 'has-email' if c[:email].present? %>"
+                <% row_class = c[:email].present? ? 'has-email' : 'has-linktree-only' %>
+                <tr class="<%= row_class %>"
                     data-username="<%= c[:username] %>"
                     data-url="<%= c[:url] %>"
                     data-followers="<%= c[:followers].to_i %>"
                     data-following="<%= c[:following].to_i %>"
                     data-likes="<%= c[:likes].to_i %>"
-                    data-email="<%= c[:email] %>">
+                    data-email="<%= c[:email] %>"
+                    data-linktree="<%= c[:linktree] %>">
                   <td class="num"><%= i + 1 %></td>
                   <td class="url-cell">
                     <%= link_to "@#{c[:username]}", c[:url], target: "_blank" %>
@@ -168,7 +187,14 @@
                     <% if c[:email].present? %>
                       <%= mail_to c[:email], c[:email] %>
                     <% else %>
-                      <span class="na">N/A</span>
+                      <span class="na">—</span>
+                    <% end %>
+                  </td>
+                  <td class="linktree-cell">
+                    <% if c[:linktree].present? %>
+                      <%= link_to c[:linktree], c[:linktree], target: "_blank" %>
+                    <% else %>
+                      <span class="na">—</span>
                     <% end %>
                   </td>
                 </tr>
@@ -214,15 +240,16 @@
       copyText(emails.join('\n'), emails.length + ' email');
     }
 
-    // Copy dạng CSV: username,url,followers,following,likes,email
+    // Copy dạng CSV: username,url,followers,following,likes,email,linktree
     function copyAsCSV() {
       const rows = document.querySelectorAll('#commenter-tbody tr');
-      const lines = ['username,url,followers,following,likes,email'];
+      const lines = ['username,url,followers,following,likes,email,linktree'];
       rows.forEach(r => {
         lines.push([
           r.dataset.username, r.dataset.url,
           r.dataset.followers, r.dataset.following, r.dataset.likes,
-          r.dataset.email || ''
+          r.dataset.email || '',
+          r.dataset.linktree || ''
         ].join(','));
       });
       copyText(lines.join('\n'), rows.length + ' dòng CSV');

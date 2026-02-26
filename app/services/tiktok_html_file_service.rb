@@ -254,7 +254,8 @@ class TiktokHtmlFileService
           followers: stats['followerCount'].to_i,
           following: stats['followingCount'].to_i,
           likes:     (stats['heartCount'] || stats['heart']).to_i,
-          email:     extract_email(bio)
+          email:     extract_email(bio),
+          linktree:  extract_linktree(bio)
         }
       rescue JSON::ParserError
       end
@@ -265,13 +266,21 @@ class TiktokHtmlFileService
     following = html.match(/"followingCount"\s*:\s*(\d+)/)&.[](1).to_i
     likes     = html.match(/"heart(?:Count)?"\s*:\s*(\d+)/)&.[](1).to_i
     bio       = html.match(/"signature"\s*:\s*"([^"]+)"/)&.[](1).to_s
-    { followers: followers, following: following, likes: likes, email: extract_email(bio) }
+    { followers: followers, following: following, likes: likes, email: extract_email(bio), linktree: extract_linktree(bio) }
   end
 
   # Lấy email đầu tiên tìm thấy trong chuỗi text, nil nếu không có
   def extract_email(text)
     return nil if text.blank?
     text.match(/[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/)&.[](0)
+  end
+
+  # Lấy linktree URL dạng linktr.ee/xxxxx trong bio, nil nếu không có
+  def extract_linktree(text)
+    return nil if text.blank?
+    match = text.match(%r{(?:https?://)?linktr\.ee/([\w.\-]+)})
+    return nil unless match
+    "https://linktr.ee/#{match[1]}"
   end
 
   def download_with_curl(url, tmp_file, referer: "https://www.google.com/", accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")

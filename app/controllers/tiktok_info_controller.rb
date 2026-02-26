@@ -13,9 +13,11 @@ class TiktokInfoController < ApplicationController
     @result  = service.get_info(tiktok_url)
 
     if @result[:success]
-      # Ưu tiên hiển thị user có email lên trước, giữ nguyên thứ tự tương đối
+      # Chỉ giữ user có email hoặc linktree; email lên trước, linktree-only xuống sau
       if @result[:commenters].present?
-        @result[:commenters] = @result[:commenters].sort_by { |c| c[:email].present? ? 0 : 1 }
+        @result[:commenters] = @result[:commenters]
+          .select { |c| c[:email].present? || c[:linktree].present? }
+          .sort_by { |c| c[:email].present? ? 0 : 1 }
       end
       render :result
     else
