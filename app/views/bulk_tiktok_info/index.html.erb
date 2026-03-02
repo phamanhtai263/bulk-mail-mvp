@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Bulk Get TikTok Info</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <%= csrf_meta_tags %>
+  <%= csp_meta_tag %>
+  <style>
+    body { font-family: Arial, sans-serif; background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); min-height: 100vh; margin: 0; padding: 20px; }
+    .container { max-width: 700px; margin: 40px auto; }
+    .card { background: white; border-radius: 15px; padding: 40px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
+    .header { text-align: center; margin-bottom: 30px; }
+    h1 { color: #333; margin: 0; font-size: 26px; }
+    .subtitle { color: #666; font-size: 14px; margin-top: 8px; }
+    label { display: block; margin-bottom: 8px; color: #555; font-weight: bold; }
+    textarea {
+      width: 100%; padding: 12px; border: 2px solid #ddd; border-radius: 8px;
+      box-sizing: border-box; font-size: 13px; font-family: monospace;
+      resize: vertical; min-height: 260px;
+    }
+    textarea:focus { border-color: #f5576c; outline: none; }
+    .hint { font-size: 12px; color: #888; margin-top: 5px; line-height: 1.5; }
+    .counter { font-size: 12px; color: #999; text-align: right; margin-top: 4px; }
+    .info-box { background: #fff8f0; border: 1px solid #ffd0a0; border-radius: 8px; padding: 12px 16px; margin: 16px 0; font-size: 13px; color: #b05800; line-height: 1.6; }
+    .info-box strong { color: #d06000; }
+    .btn { width: 100%; padding: 15px; background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; margin-top: 20px; }
+    .btn:hover { opacity: 0.9; }
+    .alert-error { background: #fee; color: #c33; border: 1px solid #fcc; padding: 12px; border-radius: 8px; margin-bottom: 20px; text-align: center; }
+    .back-link { display: block; text-align: center; margin-top: 20px; color: white; text-decoration: none; font-weight: bold; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="card">
+      <div class="header">
+        <div style="font-size: 60px;">🎵📋</div>
+        <h1>Bulk Get TikTok Info</h1>
+        <div class="subtitle">Nhập nhiều URL TikTok — tự động lấy commenters từ 2 bài post có view cao nhất của mỗi account</div>
+      </div>
+
+      <% if flash[:alert] %>
+        <div class="alert-error"><%= flash[:alert] %></div>
+      <% end %>
+
+      <div class="info-box">
+        <strong>⚙️ Cơ chế hoạt động:</strong><br>
+        • Mỗi URL: tải profile → tìm <strong>2 video nhiều view nhất</strong> → lấy <strong>toàn bộ comments</strong><br>
+        • Tổng hợp + loại trùng tên → enrich thông tin (email, linktree, followers, tối đa 500 người)<br>
+        • Chạy nền — <strong>hãy giữ tab status mở</strong> để Railway không sleep server<br>
+        • Thời gian ước tính: ~<strong>1–2 phút / URL</strong> (tùy lượng comments)
+      </div>
+      <div class="info-box" style="background:#fff0f0;border-color:#ffb0b0;color:#900;">
+        <strong>⚠️ Giới hạn Railway :</strong><br>
+        • RAM 512MB — khuyến nghị tối đa <strong>3 URLs / lần chạy</strong><br>
+        • TikTok có thể block IP Railway nếu gọi quá nhiều request liên tiếp
+      </div>
+
+      <%= form_with url: bulk_tiktok_info_submit_path, method: :post, data: { turbo: false } do |f| %>
+        <label>🔗 Danh sách TikTok Profile URL (mỗi URL 1 dòng)</label>
+        <%= text_area_tag :tiktok_urls, params[:tiktok_urls],
+              placeholder: "https://www.tiktok.com/@username1\nhttps://www.tiktok.com/@username2\n...",
+              id: "urls-textarea",
+              required: true %>
+        <div class="hint">
+          Khuyến nghị 1–100 URLs / batch • Chỉ cần dòng chứa <code>tiktok.com/@username</code> là được nhận dạng • Dòng trống bỏ qua
+        </div>
+        <div class="counter" id="url-counter">0 URLs</div>
+
+        <%= submit_tag "🚀 Bắt đầu xử lý", class: "btn", data: { disable_with: "⏳ Đang khởi động job..." } %>
+      <% end %>
+    </div>
+    <%= link_to "← Quay lại Menu", menu_path, class: "back-link" %>
+  </div>
+
+  <script>
+    const ta = document.getElementById('urls-textarea');
+    const counter = document.getElementById('url-counter');
+    function updateCounter() {
+      const lines = ta.value.split('\n')
+        .map(l => l.trim())
+        .filter(l => /tiktok\.com\/@[\w.\-]+/i.test(l));
+      counter.textContent = lines.length + ' URL' + (lines.length !== 1 ? 's' : '');
+      counter.style.color = lines.length > 100 ? '#c00' : '#999';
+    }
+    ta.addEventListener('input', updateCounter);
+    updateCounter();
+  </script>
+</body>
+</html>

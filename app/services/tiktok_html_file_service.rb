@@ -3,11 +3,71 @@ class TiktokHtmlFileService
   require 'json'
   require 'open3'
 
-  USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
   COMMENT_COUNT_PER_PAGE = 20
   MAX_COMMENT_PAGES = 5    # tối đa 100 comments (5 trang × 20)
   MAX_STATS_FETCH    = 100 # fetch stats cho tất cả commenters
 
+  # ─── Public: bulk mode ──────────────────────────────────────────────────
+  # Returns top-2 most-viewed posts' commenters (no stat enrichment).
+  # { success:, username:, display_name:, videos: [{url:, play_count:}], commenters_raw: [{username:, url:, display_name:}] }
+  def get_top2_posts_info(url)
+    username = extract_username(url)
+    tmp_file = Rails.root.join("tmp", "tiktok_#{username}_#{Time.now.to_i}.html")
+
+    Rails.logger.info "=== [Bulk] Downloading TikTok HTML for: #{username} ==="
+    success = download_with_curl(url, tmp_file)
+
+    unless success && File.exist?(tmp_file)
+      return { success: false, error: "Không thể tải trang TikTok: #{url}" }
+    end
+
+    html = File.read(tmp_file)
+    File.delete(tmp_file) if File.exist?(tmp_file)
+
+    parsed = parse_html(html, url, username)
+    return { success: false, error: parsed[:error] } unless parsed[:success]
+
+    sec_uid = parsed[:sec_uid]
+    items   = fetch_video_list(username, sec_uid)
+
+    # Pick top 2 by view count
+    top2 = items
+      .sort_by { |v| -v.dig('stats', 'playCount').to_i }
+      .first(2)
+
+    all_commenters = []
+    videos_info    = []
+
+    top2.each do |video|
+      video_id   = video['id'] || video['itemId']
+      play_count = video.dig('stats', 'playCount').to_i
+      next unless video_id
+
+      video_url = "https://www.tiktok.com/@#{username}/video/#{video_id}"
+      videos_info << { url: video_url, play_count: play_count }
+
+      # Fetch ALL comment pages (no limit)
+      commenters = fetch_all_commenters(video_id, username, max_pages: 9999)
+      all_commenters.concat(commenters)
+    end
+
+    all_commenters = all_commenters.uniq { |c| c[:username] }
+    Rails.logger.info "[Bulk] #{username}: #{all_commenters.size} unique commenters from #{videos_info.size} video(s)"
+
+    {
+      success:        true,
+      username:       username,
+      display_name:   parsed[:display_name],
+      videos:         videos_info,
+      commenters_raw: all_commenters
+    }
+  rescue => e
+    File.delete(tmp_file) if tmp_file && File.exist?(tmp_file)
+    Rails.logger.error "TiktokHtmlFileService#get_top2_posts_info Error: #{e.message}\n#{e.backtrace.first(3).join("\n")}"
+    { success: false, error: e.message }
+  end
+
+  # ─── Public: single mode ─────────────────────────────────────────────────
   def get_info(url)
     username = extract_username(url)
     tmp_file = Rails.root.join("tmp", "tiktok_#{username}_#{Time.now.to_i}.html")
@@ -156,7 +216,7 @@ class TiktokHtmlFileService
   end
 
   # Trả về [{username:, url:, display_name:}]
-  def fetch_all_commenters(video_id, username)
+  def fetch_all_commenters(video_id, username, max_pages: MAX_COMMENT_PAGES)
     all = []
     cursor = 0
     page   = 0
@@ -199,7 +259,7 @@ class TiktokHtmlFileService
 
       Rails.logger.info "Comments page #{page}: got #{comments.size}, has_more=#{has_more}"
       page += 1
-      break unless has_more && comments.any? && page < MAX_COMMENT_PAGES
+      break unless has_more && comments.any? && page < max_pages
       cursor = j["cursor"].to_i
     end
 
@@ -215,6 +275,8 @@ class TiktokHtmlFileService
     limited.map.with_index(1) do |commenter, i|
       Rails.logger.info "  [#{i}/#{limited.size}] @#{commenter[:username]}"
       stats = fetch_user_stats(commenter[:username], commenter[:url])
+      # Delay ngẫu nhiên để tránh TikTok rate-limit (không delay sau item cuối)
+      sleep(rand(1.5..3.5)) if i < limited.size
       commenter.merge(stats)
     end
   end
@@ -283,27 +345,80 @@ class TiktokHtmlFileService
     "https://linktr.ee/#{match[1]}"
   end
 
-  def download_with_curl(url, tmp_file, referer: "https://www.google.com/", accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
-    cmd = [
+  # Danh sách User-Agent để rotate khi bị block
+  USER_AGENTS = [
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:124.0) Gecko/20100101 Firefox/124.0",
+    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+  ].freeze
+
+  def download_with_curl(url, tmp_file, referer: "https://www.google.com/", accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8", retries: 2)
+    ua = USER_AGENTS.sample
+
+    # Xây dựng lệnh curl, --noproxy '*' để bypass corporate proxy nếu có
+    base_cmd = [
       "curl", "-s", "-L",
-      "-A", USER_AGENT,
+      "--noproxy", "*",
+      "-A", ua,
       "-H", "Accept: #{accept}",
-      "-H", "Accept-Language: en-US,en;q=0.9",
+      "-H", "Accept-Language: en-US,en;q=0.9,ja;q=0.8",
       "-H", "Accept-Encoding: identity",
       "-H", "Referer: #{referer}",
       "-H", "Connection: keep-alive",
-      "-b", "tt_webid_v2=7379174563279246869; tiktok_webapp_theme=light",
+      "-H", "Sec-Fetch-Dest: document",
+      "-H", "Sec-Fetch-Mode: navigate",
+      "-H", "Sec-Fetch-Site: none",
+      "-H", "Upgrade-Insecure-Requests: 1",
+      "-b", "tt_webid_v2=7379174563279246869; tiktok_webapp_theme=light; tt_chain_token=yPsPGFBjWvHjSM0fL2Miqw==",
       "--max-time", "30",
       "-o", tmp_file.to_s,
       url
     ]
-    _out, stderr, status = Open3.capture3(*cmd)
-    if status.success?
-      true
-    else
-      Rails.logger.error "curl failed: #{stderr}"
-      false
+
+    attempt = 0
+    loop do
+      _out, stderr, status = Open3.capture3(*base_cmd)
+
+      unless status.success?
+        Rails.logger.error "curl failed (attempt #{attempt + 1}): #{stderr}"
+        attempt += 1
+        break if attempt > retries
+        sleep(2 ** attempt)
+        next
+      end
+
+      # Kiểm tra xem file có bị intercept bởi proxy/firewall không
+      if File.exist?(tmp_file)
+        size    = File.size(tmp_file)
+        preview = File.read(tmp_file, 512).to_s
+
+        if proxy_blocked?(preview, size)
+          Rails.logger.warn "Proxy/firewall block detected (attempt #{attempt + 1}), size=#{size}. Preview: #{preview[0..100]}"
+          File.delete(tmp_file)
+          attempt += 1
+          break if attempt > retries
+          sleep(3 * attempt)
+          next
+        end
+      end
+
+      return status.success?
     end
+
+    false
+  end
+
+  # Phát hiện trang bị chặn bởi corporate proxy, TikTok challenge, hoặc response không hợp lệ
+  def proxy_blocked?(preview, size)
+    return true if size < 5_000   # WAF tiny pages (<5KB)
+    return true if size == 32_768 # TikTok truncated response chính xác 32KB (login required)
+    low = preview.downcase
+    return true if low.include?('application control violation')
+    return true if low.include?('slardarwaf') && !low.include?('__default_scope__')
+    return true if low.include?('access denied') && low.include?('policy')
+    return true if low.include?('forcepoint') || low.include?('zscaler') || low.include?('bluecoat')
+    false
   end
 
   def extract_username(url)
@@ -378,8 +493,23 @@ class TiktokHtmlFileService
       }
     end
 
-    Rails.logger.error "Could not parse. Preview: #{html[0..200]}"
-    { success: false, error: "Không tìm thấy dữ liệu. TikTok có thể đang chặn request." }
+    # Chẩn đoán nguyên nhân thất bại để trả về error message rõ ràng hơn
+    preview_low = html[0..500].downcase
+    reason = if html.size < 5_000
+      "Trang quá nhỏ (#{html.size} bytes) — có thể bị chặn bởi firewall/proxy"
+    elsif html.size == 32_768
+      "TikTok trả về trang truncated (32KB) — cần cookie đăng nhập hợp lệ hơn"
+    elsif preview_low.include?('application control violation')
+      "Bị chặn bởi corporate proxy (Application Control Violation) — kiểm tra VPN"
+    elsif preview_low.include?('captcha') || preview_low.include?('challenge')
+      "TikTok yêu cầu xác minh captcha — thử lại sau ít phút"
+    elsif preview_low.include?('login') && !preview_low.include?('follower')
+      "TikTok yêu cầu đăng nhập — cần cập nhật cookie session"
+    else
+      "Không tìm thấy dữ liệu (#{html.size} bytes). TikTok có thể đã thay đổi cấu trúc HTML"
+    end
+    Rails.logger.error "Could not parse @#{username}. #{reason}. Preview: #{html[0..200]}"
+    { success: false, error: reason }
   end
 
   def build_result(url, username, user, stats)

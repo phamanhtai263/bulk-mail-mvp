@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Kết quả Bulk TikTok Info</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <%= csrf_meta_tags %>
+  <%= csp_meta_tag %>
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: Arial, sans-serif; background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); min-height: 100vh; margin: 0; padding: 20px; }
+    .container { max-width: 1000px; margin: 30px auto; }
+    .card { background: white; border-radius: 15px; padding: 35px 40px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); margin-bottom: 20px; }
+
+    h1 { color: #333; font-size: 24px; margin: 0 0 6px; }
+    .subtitle { color: #888; font-size: 13px; }
+
+    /* Summary stats */
+    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 12px; margin: 20px 0; }
+    .stat-box { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white; padding: 16px 10px; border-radius: 10px; text-align: center; }
+    .stat-value { font-size: 28px; font-weight: bold; }
+    .stat-label { font-size: 11px; opacity: 0.9; margin-top: 4px; }
+
+    /* Section */
+    .section-title { font-size: 15px; font-weight: bold; color: #444; margin: 22px 0 10px; padding-bottom: 6px; border-bottom: 2px solid #ffd0e0; display: flex; align-items: center; gap: 8px; }
+    .badge { background: #f5576c; color: white; font-size: 11px; padding: 2px 9px; border-radius: 12px; font-weight: normal; }
+    .badge-green { background: #27ae60; }
+    .badge-orange { background: #e8591a; }
+
+    /* URL results table */
+    .url-table-wrap { max-height: 240px; overflow-y: auto; border: 1px solid #e0e0e0; border-radius: 10px; margin-bottom: 8px; }
+    .url-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    .url-table thead th { background: #fff5f8; color: #555; font-weight: bold; padding: 8px 10px; text-align: left; position: sticky; top: 0; border-bottom: 2px solid #ffd0e0; white-space: nowrap; }
+    .url-table tbody td { padding: 7px 10px; border-bottom: 1px solid #f5f5f5; vertical-align: middle; }
+    .url-table tbody tr.error-row td { color: #c00; background: #fff0f0; }
+    .url-table tbody tr:last-child td { border-bottom: none; }
+
+    /* Commenters */
+    .toolbar { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
+    .copy-btn { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white; border: none; padding: 7px 14px; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: bold; }
+    .copy-btn:hover { opacity: 0.85; }
+    .copy-btn.green { background: #27ae60; }
+    .copy-btn.purple { background: #764ba2; }
+    .filter-btn { background: #f0f0f0; color: #555; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 12px; }
+    .filter-btn.active { background: #f5576c; color: white; }
+
+    .commenter-table-wrap { max-height: 480px; overflow-y: auto; border: 1px solid #e0e0e0; border-radius: 10px; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    thead th { background: #fff5f8; color: #555; font-weight: bold; padding: 10px 12px; text-align: left; position: sticky; top: 0; border-bottom: 2px solid #ffd0e0; white-space: nowrap; cursor: pointer; user-select: none; }
+    thead th:hover { background: #ffeaef; }
+    thead th .arrow { margin-left: 4px; color: #999; font-size: 11px; }
+    tbody tr:hover { background: #fff5f8; }
+    tbody td { padding: 9px 12px; border-bottom: 1px solid #f5f5f5; vertical-align: middle; }
+    tbody tr:last-child td { border-bottom: none; }
+    td.num { color: #bbb; font-size: 11px; width: 32px; }
+    td.url-cell a { color: #333; text-decoration: none; font-weight: 500; }
+    td.url-cell a:hover { color: #f5576c; text-decoration: underline; }
+    td.stat-cell { text-align: right; color: #444; font-weight: 500; }
+    td.stat-cell.na { color: #ccc; font-style: italic; font-size: 11px; font-weight: normal; }
+    td.email-cell { font-size: 12px; color: #555; }
+    td.email-cell a { color: #27ae60; font-weight: bold; text-decoration: none; }
+    td.email-cell a:hover { text-decoration: underline; }
+    td.email-cell .na { color: #ccc; font-style: italic; }
+    tbody tr.has-email { background: #f0fff4; }
+    tbody tr.has-email:hover { background: #e0faeb; }
+    tbody tr.has-linktree-only { background: #fff8f0; }
+    tbody tr.has-linktree-only:hover { background: #fff0e0; }
+    td.linktree-cell { font-size: 12px; }
+    td.linktree-cell a { color: #e8591a; text-decoration: none; }
+    td.linktree-cell a:hover { text-decoration: underline; }
+    td.linktree-cell .na { color: #ccc; font-style: italic; }
+
+    .no-data { color: #aaa; font-size: 13px; font-style: italic; }
+
+    .actions { display: flex; gap: 10px; margin-top: 20px; flex-wrap: wrap; }
+    .btn { flex: 1; padding: 12px; border: none; border-radius: 8px; font-size: 14px; font-weight: bold; cursor: pointer; text-decoration: none; text-align: center; display: block; min-width: 140px; }
+    .btn-primary { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white; }
+    .btn-secondary { background: #f0f0f0; color: #333; }
+
+    .legend { font-size: 11px; color: #888; margin-bottom: 6px; display: flex; gap: 16px; flex-wrap: wrap; }
+    .legend span { display: inline-flex; align-items: center; gap: 4px; }
+    .swatch { width: 12px; height: 12px; border-radius: 2px; display: inline-block; border: 1px solid #ddd; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="card">
+      <h1>📊 Kết quả Bulk TikTok Info</h1>
+      <div class="subtitle">Job ID: <code><%= @job_id %></code></div>
+
+      <%# ── Summary Stats ── %>
+      <div class="stats-grid">
+        <div class="stat-box">
+          <div class="stat-value"><%= @stats[:total_urls].to_i %></div>
+          <div class="stat-label">🔗 Tổng URLs</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-value"><%= @stats[:success_urls].to_i %></div>
+          <div class="stat-label">✅ Thành công</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-value"><%= number_with_delimiter(@stats[:total_commenters].to_i) %></div>
+          <div class="stat-label">💬 Commenters</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-value"><%= @stats[:with_email].to_i %></div>
+          <div class="stat-label">📧 Có Email</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-value"><%= @stats[:with_linktree].to_i %></div>
+          <div class="stat-label">🌿 Linktree</div>
+        </div>
+      </div>
+
+      <%# ── Per-URL Summary ── %>
+      <div class="section-title">
+        🔗 Kết quả theo URL
+        <span class="badge"><%= @url_results.size %></span>
+        <% failed_count = @url_results.count { |r| r[:error].present? } %>
+        <% if failed_count > 0 %><span class="badge" style="background:#c0392b;"><%= failed_count %> lỗi</span><% end %>
+      </div>
+      <div class="url-table-wrap">
+        <table class="url-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>URL / Username</th>
+              <th>Video 1</th>
+              <th>Video 2</th>
+              <th style="text-align:right;">Commenters</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% @url_results.each_with_index do |r, i| %>
+              <tr class="<%= r[:error].present? ? 'error-row' : '' %>">
+                <td><%= i + 1 %></td>
+                <td>
+                  <% if r[:username].present? %>
+                    <%= link_to "@#{r[:username]}", r[:url], target: "_blank" %>
+                    <% if r[:display_name].present? %>
+                      <span style="color:#aaa;font-size:10px;"> – <%= r[:display_name] %></span>
+                    <% end %>
+                  <% else %>
+                    <span style="color:#aaa;font-size:11px;"><%= r[:url].to_s.truncate(55) %></span>
+                  <% end %>
+                  <% if r[:error].present? %>
+                    <br><span style="color:#c00;font-size:11px;">❌ <%= r[:error].to_s.truncate(80) %></span>
+                  <% end %>
+                </td>
+                <% videos = r[:videos] || [] %>
+                <td>
+                  <% if videos[0].present? %>
+                    <%= link_to "▶ #{number_with_delimiter(videos[0][:play_count].to_i)} views", videos[0][:url], target: "_blank", style: "font-size:11px;color:#f5576c;text-decoration:none;" %>
+                  <% else %><span style="color:#ccc;font-size:11px;">–</span><% end %>
+                </td>
+                <td>
+                  <% if videos[1].present? %>
+                    <%= link_to "▶ #{number_with_delimiter(videos[1][:play_count].to_i)} views", videos[1][:url], target: "_blank", style: "font-size:11px;color:#f5576c;text-decoration:none;" %>
+                  <% else %><span style="color:#ccc;font-size:11px;">–</span><% end %>
+                </td>
+                <td style="text-align:right;font-weight:bold;"><%= r[:commenter_count].to_i %></td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+
+      <%# ── All Commenters ── %>
+      <div class="section-title">
+        💬 Tất cả Commenters (unique)
+        <span class="badge"><%= @commenters.size %></span>
+        <% with_contact = @commenters.count { |c| c[:email]&.present? || c[:linktree]&.present? } %>
+        <span class="badge badge-green"><%= with_contact %> có contact</span>
+      </div>
+
+      <% if @commenters.any? %>
+        <div class="toolbar">
+          <button class="copy-btn" onclick="copyAllUrls()">📋 Copy URLs</button>
+          <button class="copy-btn green" onclick="copyEmails()">📧 Copy Emails</button>
+          <button class="copy-btn purple" onclick="copyAsCSV()">📊 Copy CSV</button>
+          <button class="filter-btn active" id="filter-all-btn" onclick="setFilter('all')">Tất cả (<%= @commenters.size %>)</button>
+          <button class="filter-btn" id="filter-contact-btn" onclick="setFilter('contact')">Có contact (<%= with_contact %>)</button>
+          <button class="filter-btn" id="filter-email-btn" onclick="setFilter('email')">Có Email (<%= @commenters.count { |c| c[:email]&.present? } %>)</button>
+        </div>
+        <div class="legend">
+          <span><span class="swatch" style="background:#f0fff4;border-color:#b2dfdb;"></span> Có Email</span>
+          <span><span class="swatch" style="background:#fff8f0;border-color:#ffe0b2;"></span> Chỉ có Linktree</span>
+        </div>
+
+        <div class="commenter-table-wrap">
+          <table id="commenter-table">
+            <thead>
+              <tr>
+                <th class="num">#</th>
+                <th onclick="sortTable(1)">Tài khoản <span class="arrow">↕</span></th>
+                <th onclick="sortTable(2)" style="text-align:right;">Followers <span class="arrow">↕</span></th>
+                <th onclick="sortTable(3)" style="text-align:right;">Following <span class="arrow">↕</span></th>
+                <th onclick="sortTable(4)" style="text-align:right;">Likes <span class="arrow">↕</span></th>
+                <th onclick="sortTable(5)">Email <span class="arrow">↕</span></th>
+                <th onclick="sortTable(6)">Linktree <span class="arrow">↕</span></th>
+              </tr>
+            </thead>
+            <tbody id="commenter-tbody">
+              <% @commenters.each_with_index do |c, i| %>
+                <% row_class = c[:email].present? ? 'has-email' : (c[:linktree].present? ? 'has-linktree-only' : '') %>
+                <tr class="<%= row_class %>"
+                    data-filter="<%= c[:email].present? ? 'email' : (c[:linktree].present? ? 'contact' : 'none') %>"
+                    data-username="<%= c[:username] %>"
+                    data-url="<%= c[:url] %>"
+                    data-followers="<%= c[:followers].to_i %>"
+                    data-following="<%= c[:following].to_i %>"
+                    data-likes="<%= c[:likes].to_i %>"
+                    data-email="<%= c[:email] %>"
+                    data-linktree="<%= c[:linktree] %>">
+                  <td class="num"><%= i + 1 %></td>
+                  <td class="url-cell">
+                    <%= link_to "@#{c[:username]}", c[:url], target: "_blank" %>
+                    <% if c[:display_name].present? && c[:display_name] != c[:username] %>
+                      <br><span style="color:#aaa;font-size:11px;"><%= c[:display_name] %></span>
+                    <% end %>
+                  </td>
+                  <% if c[:followers].nil? %>
+                    <td class="stat-cell na" colspan="3">N/A</td>
+                  <% else %>
+                    <td class="stat-cell"><%= number_with_delimiter(c[:followers].to_i) %></td>
+                    <td class="stat-cell"><%= number_with_delimiter(c[:following].to_i) %></td>
+                    <td class="stat-cell"><%= number_with_delimiter(c[:likes].to_i) %></td>
+                  <% end %>
+                  <td class="email-cell">
+                    <% if c[:email].present? %>
+                      <%= mail_to c[:email], c[:email] %>
+                    <% else %>
+                      <span class="na">—</span>
+                    <% end %>
+                  </td>
+                  <td class="linktree-cell">
+                    <% if c[:linktree].present? %>
+                      <%= link_to c[:linktree], c[:linktree], target: "_blank" %>
+                    <% else %>
+                      <span class="na">—</span>
+                    <% end %>
+                  </td>
+                </tr>
+              <% end %>
+            </tbody>
+          </table>
+        </div>
+      <% else %>
+        <p class="no-data">Không có commenter nào được tìm thấy.</p>
+      <% end %>
+
+      <div class="actions">
+        <%= link_to "🔄 Chạy lại", bulk_tiktok_info_path, class: "btn btn-primary" %>
+        <%= link_to "← Menu", menu_path, class: "btn btn-secondary" %>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ── Filter ────────────────────────────────────────────────────────────
+    let currentFilter = 'all';
+    function setFilter(f) {
+      currentFilter = f;
+      document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+      document.getElementById('filter-' + f + '-btn').classList.add('active');
+      let visibleIdx = 0;
+      document.querySelectorAll('#commenter-tbody tr').forEach(row => {
+        const df = row.dataset.filter;
+        const show = f === 'all' || df === f || (f === 'contact' && (df === 'email' || df === 'contact'));
+        row.style.display = show ? '' : 'none';
+        if (show) { visibleIdx++; row.querySelector('.num').textContent = visibleIdx; }
+      });
+    }
+
+    // ── Copy helpers ──────────────────────────────────────────────────────
+    function visibleRows() {
+      return Array.from(document.querySelectorAll('#commenter-tbody tr')).filter(r => r.style.display !== 'none');
+    }
+    function copyAllUrls() {
+      const text = visibleRows().map(r => r.dataset.url).filter(Boolean).join('\n');
+      copyText(text, visibleRows().length + ' URLs');
+    }
+    function copyEmails() {
+      const emails = visibleRows().map(r => r.dataset.email).filter(e => e && e.trim());
+      if (!emails.length) { alert('Không tìm thấy email nào.'); return; }
+      copyText(emails.join('\n'), emails.length + ' emails');
+    }
+    function copyAsCSV() {
+      const rows = visibleRows();
+      const lines = ['username,url,followers,following,likes,email,linktree'];
+      rows.forEach(r => lines.push([r.dataset.username, r.dataset.url, r.dataset.followers, r.dataset.following, r.dataset.likes, r.dataset.email || '', r.dataset.linktree || ''].join(',')));
+      copyText(lines.join('\n'), rows.length + ' dòng CSV');
+    }
+    function copyText(text, label) {
+      navigator.clipboard.writeText(text).then(() => alert('Đã copy ' + label + ' vào clipboard!')).catch(() => {
+        const ta = document.createElement('textarea'); ta.value = text;
+        document.body.appendChild(ta); ta.select(); document.execCommand('copy');
+        document.body.removeChild(ta); alert('Đã copy ' + label + '!');
+      });
+    }
+
+    // ── Sort ──────────────────────────────────────────────────────────────
+    let sortCol = -1, sortAsc = true;
+    function sortTable(col) {
+      const tbody = document.getElementById('commenter-tbody');
+      const rows = Array.from(tbody.querySelectorAll('tr'));
+      sortAsc = (sortCol === col) ? !sortAsc : true;
+      sortCol = col;
+      rows.sort((a, b) => {
+        const aCell = a.querySelectorAll('td')[col], bCell = b.querySelectorAll('td')[col];
+        if (!aCell || !bCell) return 0;
+        let av = aCell.textContent.trim().replace(/,/g, '');
+        let bv = bCell.textContent.trim().replace(/,/g, '');
+        if (col >= 2 && !isNaN(av) && !isNaN(bv)) return sortAsc ? +av - +bv : +bv - +av;
+        return sortAsc ? av.localeCompare(bv) : bv.localeCompare(av);
+      });
+      rows.forEach((r, i) => { if (r.style.display !== 'none') r.querySelector('.num').textContent = i + 1; tbody.appendChild(r); });
+      document.querySelectorAll('thead th .arrow').forEach(s => s.textContent = '↕');
+      const th = document.querySelectorAll('thead th')[col];
+      if (th) th.querySelector('.arrow').textContent = sortAsc ? '↑' : '↓';
+    }
+  </script>
+</body>
+</html>
