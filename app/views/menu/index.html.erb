@@ -122,36 +122,19 @@
         <div class="menu-description">Tra cứu followers, followings, likes của TikToker</div>
       <% end %>
 
-      <%= link_to "#", class: "menu-item" do %>
-        <div class="menu-icon">📊</div>
-        <div class="menu-title">Báo Cáo</div>
-        <div class="menu-description">Xem báo cáo và thống kê email</div>
+      <%= link_to bulk_tiktok_info_path, class: "menu-item" do %>
+        <div class="menu-icon">🎵📋</div>
+        <div class="menu-title">[WIP] Bulk Get TikTok Info</div>
+        <div class="menu-description">Nhập 50~100 URLs, tự động lấy commenters từ 2 video view cao nhất của mỗi tài khoản</div>
       <% end %>
 
-      <%= link_to "#", class: "menu-item" do %>
-        <div class="menu-icon">📝</div>
-        <div class="menu-title">Quản Lý Mẫu</div>
-        <div class="menu-description">Tạo và quản lý mẫu email</div>
+      <%= link_to admin_path, class: "menu-item" do %>
+        <div class="menu-icon">🔌</div>
+        <div class="menu-title">Quản lý Server</div>
+        <div class="menu-description">Start / Stop Railway server để tiết kiệm chi phí</div>
       <% end %>
 
-      <%= link_to "#", class: "menu-item" do %>
-        <div class="menu-icon">👥</div>
-        <div class="menu-title">Danh Sách Liên Hệ</div>
-        <div class="menu-description">Quản lý danh sách người nhận</div>
-      <% end %>
-
-      <%= link_to "#", class: "menu-item" do %>
-        <div class="menu-icon">⚙️</div>
-        <div class="menu-title">Cài Đặt</div>
-        <div class="menu-description">Cấu hình hệ thống</div>
-      <% end %>
-
-      <%= link_to "#", class: "menu-item" do %>
-        <div class="menu-icon">📈</div>
-        <div class="menu-title">Phân Tích</div>
-        <div class="menu-description">Phân tích hiệu quả campaign</div>
-      <% end %>
-    </div>
+      </div>
   </div>
 </body>
 </html>
