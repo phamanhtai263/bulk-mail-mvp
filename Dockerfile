@@ -1,5 +1,6 @@
 # syntax=docker/dockerfile:1
 # check=error=true
+# cache-bust: 2026-03-02
 
 # This Dockerfile is designed for production, not development. Use with Kamal or build'n'run by hand:
 # docker build -t bulk_mail_mvp .
