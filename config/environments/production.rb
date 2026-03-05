@@ -27,7 +27,7 @@ Rails.application.configure do
   # Assume all access to the app is happening through a SSL-terminating reverse proxy.
   config.assume_ssl = true
 
-  # Railway terminates SSL at proxy — disable force_ssl to avoid redirect loops inside container
+  # Render terminates SSL at proxy — disable force_ssl to avoid redirect loops inside container
   config.force_ssl = false
 
   # Log to STDOUT with the current request id as a default log tag.
@@ -48,14 +48,13 @@ Rails.application.configure do
 
   # Replace the default in-process and non-durable queuing backend for Active Job.
   config.active_job.queue_adapter = :solid_queue
-  config.solid_queue.connects_to = { database: { writing: :primary } }
 
   # Ignore bad email addresses and do not raise email delivery errors.
   # Set this to true and configure the email server for immediate delivery to raise delivery errors.
   # config.action_mailer.raise_delivery_errors = false
 
   # Set host to be used by links generated in mailer templates.
-  config.action_mailer.default_url_options = { host: ENV.fetch("RAILWAY_PUBLIC_DOMAIN", ENV.fetch("APP_HOST", "localhost")) }
+  config.action_mailer.default_url_options = { host: ENV.fetch("APP_HOST", "localhost") }
 
   # Specify outgoing SMTP server. Remember to add smtp/* credentials via rails credentials:edit.
   # config.action_mailer.smtp_settings = {
@@ -76,10 +75,10 @@ Rails.application.configure do
   # Only use :id for inspections in production.
   config.active_record.attributes_for_inspect = [ :id ]
 
-  # Allow Railway domains
+  # Allow Render domains
   config.hosts = [
-    /.*\.up\.railway\.app/,
-    ENV["RAILWAY_PUBLIC_DOMAIN"]
+    /.*\.onrender\.com/,
+    ENV["APP_HOST"]
   ].compact
   config.host_authorization = { exclude: ->(request) { request.path == "/up" } }
 

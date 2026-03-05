@@ -1,21 +1,19 @@
 default: &default
-  adapter: mysql2
-  encoding: utf8mb4
-  pool: 5
-  username: root
-  password: 12345678
-  host: localhost
+  adapter: postgresql
+  encoding: unicode
+  pool: <%= ENV.fetch("RAILS_MAX_THREADS") { 5 } %>
 
 development:
   <<: *default
   database: bulk_mail_mvp_development
+  username: postgres
+  password: <%= ENV.fetch("PGPASSWORD", "") %>
+  host: localhost
+
+test:
+  <<: *default
+  database: bulk_mail_mvp_test
 
 production:
-  adapter: mysql2
-  encoding: utf8mb4
-  pool: <%= ENV.fetch("RAILS_MAX_THREADS") { 5 } %>
-  host: <%= ENV["MYSQLHOST"] %>
-  port: <%= ENV["MYSQLPORT"] %>
-  database: <%= ENV["MYSQLDATABASE"] %>
-  username: <%= ENV["MYSQLUSER"] %>
-  password: <%= ENV["MYSQLPASSWORD"] %>
+  <<: *default
+  url: <%= ENV["DATABASE_URL"] %>

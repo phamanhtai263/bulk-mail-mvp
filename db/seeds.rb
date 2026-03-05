@@ -15,4 +15,10 @@ User.find_or_create_by!(email: "phamanhtai263@gmail.com") do |user|
   user.name = "Admin User"
 end
 
-puts "✅ Đã tạo user: admin@example.com / password"
+User.find_or_create_by!(email: "nphanthuytien@gmail.com") do |user|
+  user.password = "password"
+  user.password_confirmation = "password"
+  user.name = "Tori nè"
+end
+puts "✅ Đã tạo user: phamanhtai263@gmail.com / password"
+puts "✅ Đã tạo user: nphanthuytien@gmail.com / password"

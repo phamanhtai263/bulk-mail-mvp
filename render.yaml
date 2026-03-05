@@ -1,0 +1,24 @@
+databases:
+  - name: bulk_mail_mvp_db
+    databaseName: bulk_mail_mvp
+    user: bulk_mail_mvp
+    plan: free
+
+services:
+  - type: web
+    name: bulk_mail_mvp
+    runtime: docker
+    plan: free
+    healthCheckPath: /up
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: bulk_mail_mvp_db
+          property: connectionString
+      - key: RAILS_MASTER_KEY
+        sync: false   # Set this manually in Render dashboard
+      - key: RAILS_ENV
+        value: production
+      - key: RAILS_LOG_TO_STDOUT
+        value: "true"
+    dockerCommand: bundle exec rails server -b 0.0.0.0
