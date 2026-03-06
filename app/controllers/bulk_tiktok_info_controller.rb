@@ -51,13 +51,24 @@ class BulkTiktokInfoController < ApplicationController
     raw     = Rails.cache.read("bulk_tiktok_result:#{@job_id}", raw: true)
 
     unless raw
-      flash[:alert] = "Kết quả không tìm thấy hoặc đã hết hạn (6 giờ)."
-      redirect_to bulk_tiktok_info_path and return
+      respond_to do |format|
+        format.html do
+          flash[:alert] = "Kết quả không tìm thấy hoặc đã hết hạn (6 giờ)."
+          redirect_to bulk_tiktok_info_path
+        end
+        format.json { render json: { error: "Kết quả không tìm thấy hoặc đã hết hạn." }, status: :not_found }
+      end
+      return
     end
 
     data             = JSON.parse(raw, symbolize_names: true)
     @commenters      = data[:commenters] || []
     @url_results     = data[:url_results] || []
     @stats           = data[:stats] || {}
+
+    respond_to do |format|
+      format.html
+      format.json { render json: { commenters: @commenters, url_results: @url_results, stats: @stats } }
+    end
   end
 end

@@ -6,9 +6,11 @@
   <%= csrf_meta_tags %>
   <%= csp_meta_tag %>
   <style>
+    * { box-sizing: border-box; }
     body { font-family: Arial, sans-serif; background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); min-height: 100vh; margin: 0; padding: 20px; }
-    .container { max-width: 620px; margin: 60px auto; }
-    .card { background: white; border-radius: 15px; padding: 40px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); text-align: center; }
+    .container { max-width: 1000px; margin: 40px auto; }
+    /* ── Progress card ── */
+    .card { background: white; border-radius: 15px; padding: 40px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); text-align: center; margin-bottom: 20px; }
     h1 { color: #333; font-size: 24px; margin-bottom: 6px; }
     .subtitle { color: #888; font-size: 13px; margin-bottom: 30px; }
     .job-id { font-size: 11px; color: #bbb; margin-bottom: 24px; font-family: monospace; }
@@ -20,19 +22,15 @@
     .status-icon { font-size: 64px; margin-bottom: 10px; animation: spin 2s linear infinite; }
     .status-icon.done   { animation: none; }
     .status-icon.failed { animation: none; }
-
-    @keyframes spin {
-      0%   { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
-    }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
     .message-box { background: #f8f8f8; border-radius: 8px; padding: 12px 16px; font-size: 13px; color: #444; min-height: 44px; word-break: break-word; line-height: 1.5; margin-bottom: 20px; }
 
-    .btn { display: inline-block; padding: 13px 28px; border-radius: 8px; font-size: 15px; font-weight: bold; cursor: pointer; text-decoration: none; border: none; }
-    .btn-primary { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white; }
+    .btn { display: inline-block; padding: 12px 22px; border-radius: 8px; font-size: 14px; font-weight: bold; cursor: pointer; text-decoration: none; border: none; }
+    .btn-primary   { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white; }
     .btn-secondary { background: #f0f0f0; color: #555; }
 
-    .actions { display: flex; gap: 10px; justify-content: center; margin-top: 16px; }
+    .actions-bar { display: flex; gap: 10px; justify-content: center; margin-top: 16px; flex-wrap: wrap; }
 
     .status-badge { display: inline-block; padding: 4px 14px; border-radius: 20px; font-size: 12px; font-weight: bold; margin-bottom: 16px; }
     .badge-running { background: #fff3cd; color: #856404; }
@@ -40,13 +38,71 @@
     .badge-failed  { background: #f8d7da; color: #721c24; }
     .badge-pending { background: #cce5ff; color: #004085; }
 
-    .link-box { background: #f0f8ff; border: 1px solid #b8daff; border-radius: 8px; padding: 10px 14px; font-size: 12px; color: #444; word-break: break-all; margin-top: 14px; }
+    .link-box { background: #f0f8ff; border: 1px solid #b8daff; border-radius: 8px; padding: 10px 14px; font-size: 12px; color: #444; word-break: break-all; margin-top: 14px; text-align: left; }
     .link-box a { color: #0056b3; font-weight: bold; }
+
+    /* ── Result card ── */
+    .result-card { background: white; border-radius: 15px; padding: 35px 40px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); margin-bottom: 20px; }
+
+    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 12px; margin: 20px 0; }
+    .stat-box { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white; padding: 16px 10px; border-radius: 10px; text-align: center; }
+    .stat-value { font-size: 28px; font-weight: bold; }
+    .stat-label { font-size: 11px; opacity: 0.9; margin-top: 4px; }
+
+    .section-title { font-size: 15px; font-weight: bold; color: #444; margin: 22px 0 10px; padding-bottom: 6px; border-bottom: 2px solid #ffd0e0; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .badge        { background: #f5576c; color: white; font-size: 11px; padding: 2px 9px; border-radius: 12px; font-weight: normal; }
+    .badge-green  { background: #27ae60; }
+
+    .url-table-wrap { max-height: 240px; overflow-y: auto; border: 1px solid #e0e0e0; border-radius: 10px; margin-bottom: 8px; }
+    .url-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    .url-table thead th { background: #fff5f8; color: #555; font-weight: bold; padding: 8px 10px; text-align: left; position: sticky; top: 0; border-bottom: 2px solid #ffd0e0; white-space: nowrap; }
+    .url-table tbody td { padding: 7px 10px; border-bottom: 1px solid #f5f5f5; vertical-align: middle; }
+    .url-table tbody tr.error-row td { color: #c00; background: #fff0f0; }
+    .url-table tbody tr:last-child td { border-bottom: none; }
+
+    .toolbar { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
+    .copy-btn  { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white; border: none; padding: 7px 14px; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: bold; }
+    .copy-btn:hover { opacity: 0.85; }
+    .copy-btn.green  { background: #27ae60; }
+    .copy-btn.purple { background: #764ba2; }
+    .filter-btn { background: #f0f0f0; color: #555; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 12px; }
+    .filter-btn.active { background: #f5576c; color: white; }
+
+    .commenter-table-wrap { max-height: 500px; overflow-y: auto; border: 1px solid #e0e0e0; border-radius: 10px; }
+    .commenter-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .commenter-table thead th { background: #fff5f8; color: #555; font-weight: bold; padding: 10px 12px; text-align: left; position: sticky; top: 0; border-bottom: 2px solid #ffd0e0; white-space: nowrap; cursor: pointer; user-select: none; }
+    .commenter-table thead th:hover { background: #ffeaef; }
+    .commenter-table thead th .arrow { margin-left: 4px; color: #999; font-size: 11px; }
+    .commenter-table tbody tr:hover { background: #fff5f8; }
+    .commenter-table tbody td { padding: 9px 12px; border-bottom: 1px solid #f5f5f5; vertical-align: middle; }
+    .commenter-table tbody tr:last-child td { border-bottom: none; }
+    .commenter-table tbody tr.has-email { background: #f0fff4; }
+    .commenter-table tbody tr.has-email:hover { background: #e0faeb; }
+    .commenter-table tbody tr.has-linktree-only { background: #fff8f0; }
+    .commenter-table tbody tr.has-linktree-only:hover { background: #fff0e0; }
+    .td-num  { color: #bbb; font-size: 11px; width: 32px; }
+    .td-stat { text-align: right; color: #444; font-weight: 500; }
+    .td-stat.na { color: #ccc; font-style: italic; font-size: 11px; font-weight: normal; }
+    .td-email   { font-size: 12px; color: #555; }
+    .td-email a { color: #27ae60; font-weight: bold; text-decoration: none; }
+    .td-email a:hover { text-decoration: underline; }
+    .td-linktree a { font-size: 12px; color: #e8591a; text-decoration: none; }
+    .td-linktree a:hover { text-decoration: underline; }
+    .na-text { color: #ccc; font-style: italic; }
+
+    .legend { font-size: 11px; color: #888; margin-bottom: 6px; display: flex; gap: 16px; flex-wrap: wrap; }
+    .legend span { display: inline-flex; align-items: center; gap: 4px; }
+    .swatch { width: 12px; height: 12px; border-radius: 2px; display: inline-block; border: 1px solid #ddd; }
+
+    .no-data { color: #aaa; font-size: 13px; font-style: italic; }
+    .result-actions { display: flex; gap: 10px; margin-top: 20px; flex-wrap: wrap; }
+    .result-actions .btn { flex: 1; min-width: 140px; text-align: center; }
   </style>
 </head>
 <body>
   <div class="container">
-    <div class="card">
+    <!-- Progress card -->
+    <div class="card" id="progress-card">
       <div class="status-icon" id="status-icon">⏳</div>
       <h1>Đang xử lý Bulk TikTok Info</h1>
       <div class="subtitle">Trang sẽ tự cập nhật – bạn có thể để yên và quay lại sau</div>
@@ -63,28 +119,36 @@
 
       <div id="action-area"></div>
 
-      <div class="link-box">
+      <div class="link-box" id="link-box">
         💡 <strong>Giữ tab này mở</strong> để tránh Railway sleep container và kill job.<br>
         Poll mỗi 3 giây sẽ giữ server thức trong suốt quá trình xử lý.<br>
         Hoặc bookmark URL này để kiểm tra sau:<br>
         <a href="<%= bulk_tiktok_info_status_url(job_id: @job_id) %>"><%= bulk_tiktok_info_status_url(job_id: @job_id) %></a>
       </div>
     </div>
+
+    <!-- Result section rendered inline when done -->
+    <div id="result-section" style="display:none;"></div>
   </div>
 
   <script>
     const jobId     = "<%= @job_id %>";
     const statusUrl = "<%= bulk_tiktok_info_status_path(job_id: @job_id, format: :json) %>";
-    const resultUrl = "<%= bulk_tiktok_info_result_path(job_id: @job_id) %>";
+    const resultUrl = "<%= bulk_tiktok_info_result_path(job_id: @job_id, format: :json) %>";
+    const newRunUrl = "<%= bulk_tiktok_info_path %>";
+    const menuUrl   = "<%= menu_path %>";
 
-    const icon      = document.getElementById('status-icon');
-    const badge     = document.getElementById('status-badge');
-    const bar       = document.getElementById('progress-bar');
-    const progText  = document.getElementById('progress-text');
-    const msgBox    = document.getElementById('message-box');
-    const actionArea= document.getElementById('action-area');
+    const icon       = document.getElementById('status-icon');
+    const badge      = document.getElementById('status-badge');
+    const bar        = document.getElementById('progress-bar');
+    const progText   = document.getElementById('progress-text');
+    const msgBox     = document.getElementById('message-box');
+    const actionArea = document.getElementById('action-area');
+    const linkBox    = document.getElementById('link-box');
+    const resultSec  = document.getElementById('result-section');
 
     let pollTimer;
+    let resultLoaded = false;
 
     function poll() {
       fetch(statusUrl, { headers: { 'Accept': 'application/json' } })
@@ -109,26 +173,234 @@
             icon.textContent = '🎉';
             icon.className   = 'status-icon done';
             bar.style.width  = '100%';
-            actionArea.innerHTML =
-              '<div class="actions">' +
-              '<a href="' + resultUrl + '" class="btn btn-primary">📊 Xem Kết Quả</a>' +
-              '<a href="<%= bulk_tiktok_info_path %>" class="btn btn-secondary">🔄 Chạy lại</a>' +
-              '</div>';
+            linkBox.style.display = 'none';
+            actionArea.innerHTML = '<div style="color:#888;font-size:13px;margin-top:8px;">⬇️ Đang tải kết quả…</div>';
+            if (!resultLoaded) loadResult();
           } else if (status === 'failed') {
             icon.textContent = '❌';
             icon.className   = 'status-icon failed';
             actionArea.innerHTML =
-              '<div class="actions">' +
-              '<a href="<%= bulk_tiktok_info_path %>" class="btn btn-primary">🔄 Thử lại</a>' +
+              '<div class="actions-bar">' +
+              '<a href="' + newRunUrl + '" class="btn btn-primary">🔄 Thử lại</a>' +
               '</div>';
           } else {
-            // not_found or unknown
             pollTimer = setTimeout(poll, 5000);
           }
         })
+        .catch(() => { pollTimer = setTimeout(poll, 5000); });
+    }
+
+    function esc(s) {
+      if (s == null) return '';
+      return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    function loadResult() {
+      resultLoaded = true;
+      fetch(resultUrl, { headers: { 'Accept': 'application/json' } })
+        .then(r => {
+          if (!r.ok) throw new Error('HTTP ' + r.status);
+          return r.json();
+        })
+        .then(data => {
+          actionArea.innerHTML =
+            '<div class="actions-bar">' +
+            '<a href="' + newRunUrl + '" class="btn btn-primary">🔄 Chạy lại</a>' +
+            '<a href="' + menuUrl + '" class="btn btn-secondary">← Menu</a>' +
+            '</div>';
+          renderResult(data);
+        })
         .catch(() => {
-          pollTimer = setTimeout(poll, 5000);
+          actionArea.innerHTML = '<div style="color:#c00;font-size:13px;margin-top:8px;">❌ Không thể tải kết quả. <a href="' + newRunUrl + '">Thử lại</a></div>';
         });
+    }
+
+    function renderResult(data) {
+      const commenters = data.commenters || [];
+      const urlResults = data.url_results || [];
+      const stats      = data.stats || {};
+
+      const withContact = commenters.filter(c => (c.email && c.email.trim()) || (c.linktree && c.linktree.trim())).length;
+      const withEmail   = commenters.filter(c => c.email && c.email.trim()).length;
+      const failedCount = urlResults.filter(r => r.error).length;
+
+      // Stats grid
+      const statsHtml = `
+        <div class="stats-grid">
+          <div class="stat-box"><div class="stat-value">${esc(stats.total_urls)||0}</div><div class="stat-label">🔗 Tổng URLs</div></div>
+          <div class="stat-box"><div class="stat-value">${esc(stats.success_urls)||0}</div><div class="stat-label">✅ Thành công</div></div>
+          <div class="stat-box"><div class="stat-value">${Number(stats.total_commenters||0).toLocaleString('vi-VN')}</div><div class="stat-label">💬 Commenters</div></div>
+          <div class="stat-box"><div class="stat-value">${esc(stats.with_email)||0}</div><div class="stat-label">📧 Có Email</div></div>
+          <div class="stat-box"><div class="stat-value">${esc(stats.with_linktree)||0}</div><div class="stat-label">🌿 Linktree</div></div>
+        </div>`;
+
+      // URL results table
+      const urlRows = urlResults.map((r, i) => {
+        const videos = r.videos || [];
+        const v0 = videos[0], v1 = videos[1];
+        const nameCell = r.username
+          ? `<a href="${esc(r.url)}" target="_blank">@${esc(r.username)}</a>${r.display_name ? ` <span style="color:#aaa;font-size:10px;">– ${esc(r.display_name)}</span>` : ''}${r.error ? `<br><span style="color:#c00;font-size:11px;">❌ ${esc(String(r.error).substring(0,80))}</span>` : ''}`
+          : `<span style="color:#aaa;font-size:11px;">${esc(String(r.url||'').substring(0,55))}</span>${r.error ? `<br><span style="color:#c00;font-size:11px;">❌ ${esc(String(r.error).substring(0,80))}</span>` : ''}`;
+        const v0Cell = v0 ? `<a href="${esc(v0.url)}" target="_blank" style="font-size:11px;color:#f5576c;text-decoration:none;">▶ ${Number(v0.play_count||0).toLocaleString('vi-VN')} views</a>` : '<span style="color:#ccc;font-size:11px;">–</span>';
+        const v1Cell = v1 ? `<a href="${esc(v1.url)}" target="_blank" style="font-size:11px;color:#f5576c;text-decoration:none;">▶ ${Number(v1.play_count||0).toLocaleString('vi-VN')} views</a>` : '<span style="color:#ccc;font-size:11px;">–</span>';
+        return `<tr class="${r.error ? 'error-row' : ''}"><td>${i+1}</td><td>${nameCell}</td><td>${v0Cell}</td><td>${v1Cell}</td><td style="text-align:right;font-weight:bold;">${r.commenter_count||0}</td></tr>`;
+      }).join('');
+
+      const urlTableHtml = `
+        <div class="section-title">
+          🔗 Kết quả theo URL <span class="badge">${urlResults.length}</span>
+          ${failedCount > 0 ? `<span class="badge" style="background:#c0392b;">${failedCount} lỗi</span>` : ''}
+        </div>
+        <div class="url-table-wrap">
+          <table class="url-table">
+            <thead><tr><th>#</th><th>URL / Username</th><th>Video 1</th><th>Video 2</th><th style="text-align:right;">Commenters</th></tr></thead>
+            <tbody>${urlRows}</tbody>
+          </table>
+        </div>`;
+
+      // Commenter rows
+      const commenterRowsHtml = commenters.map((c, i) => {
+        const hasEmail    = c.email && c.email.trim();
+        const hasLinktree = c.linktree && c.linktree.trim();
+        const rowClass    = hasEmail ? 'has-email' : (hasLinktree ? 'has-linktree-only' : '');
+        const filterAttr  = hasEmail ? 'email' : (hasLinktree ? 'contact' : 'none');
+        const emailCell   = hasEmail  ? `<a href="mailto:${esc(c.email)}">${esc(c.email)}</a>` : '<span class="na-text">—</span>';
+        const linkCell    = hasLinktree ? `<a href="${esc(c.linktree)}" target="_blank">${esc(c.linktree)}</a>` : '<span class="na-text">—</span>';
+        const displayName = c.display_name && c.display_name !== c.username ? `<br><span style="color:#aaa;font-size:11px;">${esc(c.display_name)}</span>` : '';
+        const statCells   = c.followers == null
+          ? `<td class="td-stat na" colspan="3">N/A</td>`
+          : `<td class="td-stat">${Number(c.followers||0).toLocaleString('vi-VN')}</td><td class="td-stat">${Number(c.following||0).toLocaleString('vi-VN')}</td><td class="td-stat">${Number(c.likes||0).toLocaleString('vi-VN')}</td>`;
+        return `<tr class="${rowClass}"
+                    data-filter="${filterAttr}"
+                    data-username="${esc(c.username)}"
+                    data-url="${esc(c.url)}"
+                    data-followers="${c.followers != null ? c.followers : ''}"
+                    data-following="${c.following != null ? c.following : ''}"
+                    data-likes="${c.likes != null ? c.likes : ''}"
+                    data-email="${esc(c.email||'')}"
+                    data-linktree="${esc(c.linktree||'')}">
+          <td class="td-num">${i+1}</td>
+          <td><a href="${esc(c.url)}" target="_blank">@${esc(c.username)}</a>${displayName}</td>
+          ${statCells}
+          <td class="td-email">${emailCell}</td>
+          <td class="td-linktree">${linkCell}</td>
+        </tr>`;
+      }).join('');
+
+      const commenterBodyHtml = commenters.length > 0 ? `
+        <div class="toolbar">
+          <button class="copy-btn" onclick="copyAllUrls()">📋 Copy URLs</button>
+          <button class="copy-btn green" onclick="copyEmails()">📧 Copy Emails</button>
+          <button class="copy-btn purple" onclick="copyAsCSV()">📊 Copy CSV</button>
+          <button class="filter-btn active" id="filter-all-btn" onclick="setFilter('all')">Tất cả (${commenters.length})</button>
+          <button class="filter-btn" id="filter-contact-btn" onclick="setFilter('contact')">Có contact (${withContact})</button>
+          <button class="filter-btn" id="filter-email-btn" onclick="setFilter('email')">Có Email (${withEmail})</button>
+        </div>
+        <div class="legend">
+          <span><span class="swatch" style="background:#f0fff4;border-color:#b2dfdb;"></span> Có Email</span>
+          <span><span class="swatch" style="background:#fff8f0;border-color:#ffe0b2;"></span> Chỉ có Linktree</span>
+        </div>
+        <div class="commenter-table-wrap">
+          <table class="commenter-table" id="commenter-table">
+            <thead><tr>
+              <th class="td-num">#</th>
+              <th onclick="sortTable(1)">Tài khoản <span class="arrow">↕</span></th>
+              <th onclick="sortTable(2)" style="text-align:right;">Followers <span class="arrow">↕</span></th>
+              <th onclick="sortTable(3)" style="text-align:right;">Following <span class="arrow">↕</span></th>
+              <th onclick="sortTable(4)" style="text-align:right;">Likes <span class="arrow">↕</span></th>
+              <th onclick="sortTable(5)">Email <span class="arrow">↕</span></th>
+              <th onclick="sortTable(6)">Linktree <span class="arrow">↕</span></th>
+            </tr></thead>
+            <tbody id="commenter-tbody">${commenterRowsHtml}</tbody>
+          </table>
+        </div>` : '<p class="no-data">Không có commenter nào được tìm thấy.</p>';
+
+      resultSec.innerHTML = `
+        <div class="result-card">
+          <h1>📊 Kết quả Bulk TikTok Info</h1>
+          <div class="subtitle">Job ID: <code>${esc(jobId)}</code></div>
+          ${statsHtml}
+          ${urlTableHtml}
+          <div class="section-title">
+            💬 Tất cả Commenters (unique)
+            <span class="badge">${commenters.length}</span>
+            <span class="badge badge-green">${withContact} có contact</span>
+          </div>
+          ${commenterBodyHtml}
+          <div class="result-actions">
+            <a href="${newRunUrl}" class="btn btn-primary">🔄 Chạy lại</a>
+            <a href="${menuUrl}" class="btn btn-secondary">← Menu</a>
+          </div>
+        </div>`;
+      resultSec.style.display = 'block';
+      resultSec.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    // ── Filter ──
+    let currentFilter = 'all';
+    function setFilter(f) {
+      currentFilter = f;
+      document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+      const btn = document.getElementById('filter-' + f + '-btn');
+      if (btn) btn.classList.add('active');
+      let idx = 0;
+      document.querySelectorAll('#commenter-tbody tr').forEach(row => {
+        const df   = row.dataset.filter;
+        const show = f === 'all' || df === f || (f === 'contact' && (df === 'email' || df === 'contact'));
+        row.style.display = show ? '' : 'none';
+        if (show) { idx++; row.querySelector('.td-num').textContent = idx; }
+      });
+    }
+
+    // ── Copy helpers ──
+    function visibleRows() {
+      return Array.from(document.querySelectorAll('#commenter-tbody tr')).filter(r => r.style.display !== 'none');
+    }
+    function copyAllUrls() {
+      const text = visibleRows().map(r => r.dataset.url).filter(Boolean).join('\n');
+      copyText(text, visibleRows().length + ' URLs');
+    }
+    function copyEmails() {
+      const emails = visibleRows().map(r => r.dataset.email).filter(e => e && e.trim());
+      if (!emails.length) { alert('Không tìm thấy email nào.'); return; }
+      copyText(emails.join('\n'), emails.length + ' emails');
+    }
+    function copyAsCSV() {
+      const rows = visibleRows();
+      const lines = ['username,url,followers,following,likes,email,linktree'];
+      rows.forEach(r => lines.push([r.dataset.username, r.dataset.url, r.dataset.followers, r.dataset.following, r.dataset.likes, r.dataset.email||'', r.dataset.linktree||''].join(',')));
+      copyText(lines.join('\n'), rows.length + ' dòng CSV');
+    }
+    function copyText(text, label) {
+      navigator.clipboard.writeText(text)
+        .then(() => alert('Đã copy ' + label + ' vào clipboard!'))
+        .catch(() => {
+          const ta = document.createElement('textarea'); ta.value = text;
+          document.body.appendChild(ta); ta.select(); document.execCommand('copy');
+          document.body.removeChild(ta); alert('Đã copy ' + label + '!');
+        });
+    }
+
+    // ── Sort ──
+    let sortCol = -1, sortAsc = true;
+    function sortTable(col) {
+      const tbody = document.getElementById('commenter-tbody');
+      if (!tbody) return;
+      const rows = Array.from(tbody.querySelectorAll('tr'));
+      sortAsc = (sortCol === col) ? !sortAsc : true;
+      sortCol = col;
+      rows.sort((a, b) => {
+        const aCell = a.querySelectorAll('td')[col], bCell = b.querySelectorAll('td')[col];
+        if (!aCell || !bCell) return 0;
+        let av = aCell.textContent.trim().replace(/[,\s]/g, '');
+        let bv = bCell.textContent.trim().replace(/[,\s]/g, '');
+        if (col >= 2 && !isNaN(av) && !isNaN(bv)) return sortAsc ? +av - +bv : +bv - +av;
+        return sortAsc ? av.localeCompare(bv) : bv.localeCompare(av);
+      });
+      rows.forEach((r, i) => { if (r.style.display !== 'none') r.querySelector('.td-num').textContent = i + 1; tbody.appendChild(r); });
+      document.querySelectorAll('.commenter-table thead th .arrow').forEach(s => s.textContent = '↕');
+      const th = document.querySelectorAll('.commenter-table thead th')[col];
+      if (th) th.querySelector('.arrow').textContent = sortAsc ? '↑' : '↓';
     }
 
     poll();
